@@ -1,103 +1,65 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const transferencias = [
-  {
-    id: '1',
-    descricao: 'Salário',
-    valor: 3000.00,
-    tipo: 'receita',
-    categoria: 'Salário',
-    data: '2024-01-15',
-    icone: '💰',
-    observacoes: 'Salário mensal da empresa XYZ',
-    conta: 'Banco Principal',
-    status: 'confirmado'
-  },
-  {
-    id: '2',
-    descricao: 'Aluguel',
-    valor: 1200.00,
-    tipo: 'despesa',
-    categoria: 'Moradia',
-    data: '2024-01-10',
-    icone: '🏠',
-    observacoes: 'Aluguel do apartamento',
-    conta: 'Banco Principal',
-    status: 'confirmado'
-  },
-  {
-    id: '3',
-    descricao: 'Supermercado',
-    valor: 450.00,
-    tipo: 'despesa',
-    categoria: 'Alimentação',
-    data: '2024-01-12',
-    icone: '🍽️',
-    observacoes: 'Compras do mês',
-    conta: 'Cartão de Crédito',
-    status: 'pendente'
-  },
-  {
-    id: '4',
-    descricao: 'Freelance',
-    valor: 500.00,
-    tipo: 'receita',
-    categoria: 'Freelance',
-    data: '2024-01-08',
-    icone: '💼',
-    observacoes: 'Projeto de design',
-    conta: 'Banco Principal',
-    status: 'confirmado'
-  },
-  {
-    id: '5',
-    descricao: 'Combustível',
-    valor: 150.00,
-    tipo: 'despesa',
-    categoria: 'Transporte',
-    data: '2024-01-14',
-    icone: '🚗',
-    observacoes: 'Abastecimento do carro',
-    conta: 'Cartão de Crédito',
-    status: 'pendente'
-  }
-];
+import { useCategories } from '@/contexts/CategoryContext';
+import { useTransfers } from '@/contexts/TransferContext';
+import { TransactionType, Transfer } from '@/types';
 
 export default function DetalhesTransferenciaScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [transferencia, setTransferencia] = useState<typeof transferencias[0] | null>(null);
+  const { transfers, getTransferById, loading, deleteTransfer } = useTransfers();
+  const { categories } = useCategories();
+  const [transferencia, setTransferencia] = useState<Transfer | null>(null);
 
   useEffect(() => {
-    if (id) {
-      const found = transferencias.find(t => t.id === id);
+    if (id && transfers.length > 0) {
+      const found = getTransferById(id);
       if (found) {
         setTransferencia(found);
+      } else {
+        setTransferencia(null);
       }
     }
-  }, [id]);
+  }, [id, getTransferById, transfers]);
 
   const formatarData = (dataString: string) => {
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
+    if (!dataString) return '';
+
+    // Parse the date string manually to avoid timezone issues
+    const [year, month, day] = dataString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+
+    return date.toLocaleDateString('pt-BR');
   };
 
   const formatarValor = (valor: number) => {
     return valor.toLocaleString('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     });
   };
 
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size='large' color='#007bff' />
+        <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   if (!transferencia) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedText>Transferência não encontrada</ThemedText>
+      <ThemedView style={[styles.container, styles.centerContent]}>
+        <ThemedText style={styles.errorText}>Transferência não encontrada</ThemedText>
+        <ThemedText style={styles.errorSubtext}>ID: {id}</ThemedText>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <ThemedText style={styles.backButtonText}>Voltar</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
@@ -105,53 +67,63 @@ export default function DetalhesTransferenciaScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText style={styles.icone}>{transferencia.icone}</ThemedText>
-        <ThemedText type="title">{transferencia.descricao}</ThemedText>
+        <ThemedText style={styles.icone}>
+          {categories.find((cat) => cat.id === transferencia.categoryId)?.icon || '📊'}
+        </ThemedText>
+        <ThemedText type='title'>{transferencia.description}</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.content}>
         <ThemedView style={styles.card}>
-          <ThemedText type="defaultSemiBold" style={styles.cardTitle}>
+          <ThemedText type='defaultSemiBold' style={styles.cardTitle}>
             Valor
           </ThemedText>
-          <ThemedText style={[
-            styles.valor,
-            { color: transferencia.tipo === 'receita' ? '#28a745' : '#dc3545' }
-          ]}>
-            {transferencia.tipo === 'receita' ? '+' : '-'} {formatarValor(transferencia.valor)}
+          <ThemedText
+            style={[styles.valor, { color: transferencia.type === TransactionType.INCOME ? '#28a745' : '#dc3545' }]}
+          >
+            {transferencia.type === TransactionType.INCOME ? '+' : '-'} {formatarValor(transferencia.amount)}
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.infoSection}>
           <ThemedView style={styles.infoItem}>
-            <ThemedText type="defaultSemiBold">Data</ThemedText>
-            <ThemedText>{formatarData(transferencia.data)}</ThemedText>
+            <ThemedText type='defaultSemiBold'>Data</ThemedText>
+            <ThemedText>{formatarData(transferencia.date)}</ThemedText>
           </ThemedView>
 
           <ThemedView style={styles.infoItem}>
-            <ThemedText type="defaultSemiBold">Tipo</ThemedText>
-            <ThemedText style={{
-              color: transferencia.tipo === 'receita' ? '#28a745' : '#dc3545',
-              textTransform: 'capitalize'
-            }}>
-              {transferencia.tipo}
+            <ThemedText type='defaultSemiBold'>Tipo</ThemedText>
+            <ThemedText
+              style={{
+                color: transferencia.type === TransactionType.INCOME ? '#28a745' : '#dc3545',
+                textTransform: 'capitalize',
+              }}
+            >
+              {transferencia.type === TransactionType.INCOME ? 'Receita' : 'Despesa'}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.infoItem}>
+            <ThemedText type='defaultSemiBold'>Categoria</ThemedText>
+            <ThemedText>
+              {categories.find((cat) => cat.id === transferencia.categoryId)?.name || 'Categoria não encontrada'}
             </ThemedText>
           </ThemedView>
         </ThemedView>
 
-        {transferencia.observacoes && (
+        {transferencia.notes && (
           <ThemedView style={styles.observacoesSection}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+            <ThemedText type='defaultSemiBold' style={styles.sectionTitle}>
               Observações
             </ThemedText>
-            <ThemedText>{transferencia.observacoes}</ThemedText>
+            <ThemedText>{transferencia.notes}</ThemedText>
           </ThemedView>
         )}
 
         <ThemedView style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => Alert.alert('Editar', 'Funcionalidade de edição será implementada')}
+            onPress={() => router.push(`/transferencias/editar?id=${transferencia.id}`)}
           >
             <ThemedText style={styles.editButtonText}>Editar</ThemedText>
           </TouchableOpacity>
@@ -159,22 +131,24 @@ export default function DetalhesTransferenciaScreen() {
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => {
-              Alert.alert(
-                'Confirmar Exclusão',
-                'Tem certeza que deseja excluir esta transferência?',
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  {
-                    text: 'Excluir',
-                    style: 'destructive',
-                    onPress: () => {
+              Alert.alert('Confirmar Exclusão', 'Tem certeza que deseja excluir esta transferência?', [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Excluir',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!transferencia) return;
+                    try {
+                      await deleteTransfer(transferencia.id);
                       Alert.alert('Sucesso', 'Transferência excluída com sucesso!', [
-                        { text: 'OK', onPress: () => router.back() }
+                        { text: 'OK', onPress: () => router.back() },
                       ]);
+                    } catch (error) {
+                      Alert.alert('Erro', 'Falha ao excluir transferência');
                     }
-                  }
-                ]
-              );
+                  },
+                },
+              ]);
             }}
           >
             <ThemedText style={styles.deleteButtonText}>Excluir</ThemedText>
@@ -280,5 +254,40 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#dc3545',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    minHeight: 50,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginTop: 15,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

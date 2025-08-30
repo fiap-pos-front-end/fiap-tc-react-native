@@ -1,33 +1,28 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const categorias = [
-  { id: '1', nome: 'Moradia', tipo: 'despesa', cor: '#dc3545', icone: '🏠' },
-  { id: '2', nome: 'Alimentação', tipo: 'despesa', cor: '#dc3545', icone: '🍽️' },
-  { id: '3', nome: 'Transporte', tipo: 'despesa', cor: '#dc3545', icone: '🚗' },
-  { id: '4', nome: 'Lazer', tipo: 'despesa', cor: '#dc3545', icone: '🎮' },
-  { id: '5', nome: 'Salário', tipo: 'receita', cor: '#28a745', icone: '💰' },
-  { id: '6', nome: 'Freelance', tipo: 'receita', cor: '#28a745', icone: '💼' },
-  { id: '7', nome: 'Investimentos', tipo: 'receita', cor: '#28a745', icone: '📈' },
-];
+import { useCategories } from '@/contexts/CategoryContext';
+import { Category, TransactionType } from '@/types';
 
 export default function CategoriaDetalhesScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [categoria, setCategoria] = useState<typeof categorias[0] | null>(null);
+  const { categories, getCategoryById, loading, deleteCategory } = useCategories();
+  const [categoria, setCategoria] = useState<Category | null>(null);
 
   useEffect(() => {
-    if (id) {
-      const found = categorias.find(cat => cat.id === id);
+    if (id && categories.length > 0) {
+      const found = getCategoryById(id);
       if (found) {
         setCategoria(found);
+      } else {
+        setCategoria(null);
       }
     }
-  }, [id]);
+  }, [id, getCategoryById, categories]);
 
   const handleExcluir = () => {
     Alert.alert(
@@ -38,21 +33,42 @@ export default function CategoriaDetalhesScreen() {
         {
           text: 'Excluir',
           style: 'destructive',
-          onPress: () => {
-            // Aqui você implementaria a lógica para excluir a categoria
-            Alert.alert('Sucesso', 'Categoria excluída com sucesso!', [
-              { text: 'OK', onPress: () => router.back() }
-            ]);
+          onPress: async () => {
+            if (!categoria) return;
+            try {
+              await deleteCategory(categoria.id);
+              Alert.alert('Sucesso', 'Categoria excluída com sucesso!', [
+                { text: 'OK', onPress: () => router.back() }
+              ]);
+            } catch (error) {
+              Alert.alert('Erro', 'Falha ao excluir categoria');
+            }
           }
         }
       ]
     );
   };
 
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   if (!categoria) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedText>Categoria não encontrada</ThemedText>
+      <ThemedView style={[styles.container, styles.centerContent]}>
+        <ThemedText style={styles.errorText}>Categoria não encontrada</ThemedText>
+        <ThemedText style={styles.errorSubtext}>ID: {id}</ThemedText>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ThemedText style={styles.backButtonText}>Voltar</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
@@ -60,31 +76,28 @@ export default function CategoriaDetalhesScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText style={styles.icone}>{categoria.icone}</ThemedText>
-        <ThemedText type="title">{categoria.nome}</ThemedText>
+        <ThemedText style={styles.icone}>{categoria.icon}</ThemedText>
+        <ThemedText type="title">{categoria.name}</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.content}>
         <ThemedView style={styles.infoSection}>
           <ThemedView style={styles.infoItem}>
             <ThemedText type="defaultSemiBold">Nome</ThemedText>
-            <ThemedText>{categoria.nome}</ThemedText>
+            <ThemedText>{categoria.name}</ThemedText>
           </ThemedView>
 
           <ThemedView style={styles.infoItem}>
             <ThemedText type="defaultSemiBold">Tipo</ThemedText>
             <ThemedText style={{
-              color: categoria.tipo === 'receita' ? '#28a745' : '#dc3545',
+              color: categoria.type === TransactionType.INCOME ? '#28a745' : '#dc3545',
               textTransform: 'capitalize'
             }}>
-              {categoria.tipo}
+              {categoria.type === TransactionType.INCOME ? 'Receita' : 'Despesa'}
             </ThemedText>
           </ThemedView>
 
-          <ThemedView style={styles.infoItem}>
-            <ThemedText type="defaultSemiBold">Ícone</ThemedText>
-            <ThemedText style={styles.iconeDisplay}>{categoria.icone}</ThemedText>
-          </ThemedView>
+
         </ThemedView>
 
         <ThemedView style={styles.actions}>
@@ -145,9 +158,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minHeight: 50, // Ensure minimum height for info items
   },
-  iconeDisplay: {
-    fontSize: 24,
-  },
+
   actions: {
     flexDirection: 'row',
     gap: 15,
@@ -179,5 +190,40 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#dc3545',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    minHeight: 50,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginTop: 15,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

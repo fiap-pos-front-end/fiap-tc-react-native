@@ -1,33 +1,52 @@
 import { useRouter } from 'expo-router';
-import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const categorias = [
-  { id: '1', nome: 'Moradia', tipo: 'despesa', cor: '#dc3545', icone: '🏠' },
-  { id: '2', nome: 'Alimentação', tipo: 'despesa', cor: '#dc3545', icone: '🍽️' },
-  { id: '3', nome: 'Transporte', tipo: 'despesa', cor: '#dc3545', icone: '🚗' },
-  { id: '4', nome: 'Lazer', tipo: 'despesa', cor: '#dc3545', icone: '🎮' },
-  { id: '5', nome: 'Salário', tipo: 'receita', cor: '#28a745', icone: '💰' },
-  { id: '6', nome: 'Freelance', tipo: 'receita', cor: '#28a745', icone: '💼' },
-  { id: '7', nome: 'Investimentos', tipo: 'receita', cor: '#28a745', icone: '📈' },
-];
+import { useCategories } from '@/contexts/CategoryContext';
+import { TransactionType } from '@/types';
 
 export default function CategoriasScreen() {
   const router = useRouter();
+  const { categories, loading, error } = useCategories();
 
-  const renderCategoria = ({ item }: { item: typeof categorias[0] }) => (
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const renderCategoria = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[styles.categoriaItem, { borderLeftColor: item.cor }]}
+      style={[
+        styles.categoriaItem,
+        {
+          borderLeftColor: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545'
+        }
+      ]}
       onPress={() => router.push(`/categorias/detalhes?id=${item.id}` as any)}
     >
       <ThemedView style={styles.categoriaInfo}>
-        <ThemedText style={styles.icone}>{item.icone}</ThemedText>
+        <ThemedText style={styles.icone}>{item.icon}</ThemedText>
         <ThemedView style={styles.categoriaText}>
-          <ThemedText type="defaultSemiBold">{item.nome}</ThemedText>
-          <ThemedText style={[styles.tipo, { color: item.cor }]}>
-            {item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}
+          <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
+          <ThemedText style={[
+            styles.tipo,
+            {
+              color: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545'
+            }
+          ]}>
+            {item.type === TransactionType.INCOME ? 'Receita' : 'Despesa'}
           </ThemedText>
         </ThemedView>
       </ThemedView>
@@ -43,7 +62,7 @@ export default function CategoriasScreen() {
       </ThemedView>
 
       <FlatList
-        data={categorias}
+        data={categories}
         renderItem={renderCategoria}
         keyExtractor={(item) => item.id}
         style={styles.list}
@@ -134,5 +153,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28, // Match font size for perfect centering
     includeFontPadding: false, // Remove extra padding on Android
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

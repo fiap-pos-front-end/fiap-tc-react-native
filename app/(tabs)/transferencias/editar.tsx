@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { DatePicker } from '@/components/DatePicker';
@@ -7,25 +7,22 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useCategories } from '@/contexts/CategoryContext';
 import { useTransfers } from '@/contexts/TransferContext';
-import { TransactionType } from '@/types';
+import { TransactionType, Transfer } from '@/types';
 
-export default function NovaTransferenciaScreen() {
+export default function EditarTransferenciaScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { getTransferById, updateTransfer } = useTransfers();
   const { categories } = useCategories();
-  const { addTransfer } = useTransfers();
+
+  const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState<TransactionType>(TransactionType.EXPENSE);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
-  const [data, setData] = useState(() => {
-    // Set default date to today in local timezone to avoid timezone issues
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
+  const [data, setData] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  const [loading, setLoading] = useState(true);
 
   // Price formatting functions
   const formatPrice = (text: string) => {
@@ -55,32 +52,40 @@ export default function NovaTransferenciaScreen() {
     setValor(formatted);
   };
 
-  // Check if we have categories before allowing transfer creation
-  if (categories.length === 0) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <ThemedView style={styles.header}>
-          <ThemedText type='title'>Nova Transferência</ThemedText>
-          <ThemedText type='subtitle'>Registre uma nova transação financeira</ThemedText>
-        </ThemedView>
+  useEffect(() => {
+    if (id) {
+      const transferData = getTransferById(id);
+      if (transferData) {
+        setTransfer(transferData);
+        setDescricao(transferData.description);
+        setValor(transferData.amount.toString());
+        setTipo(transferData.type);
+        setCategoriaSelecionada(transferData.categoryId);
+        setData(transferData.date);
+        setObservacoes(transferData.notes || '');
+      } else {
+        Alert.alert('Erro', 'Transferência não encontrada', [{ text: 'OK', onPress: () => router.back() }]);
+      }
+      setLoading(false);
+    }
+  }, [id, getTransferById, router]);
 
-        <ThemedView style={styles.noCategoriesContainer}>
-          <ThemedText style={styles.noCategoriesIcon}>📊</ThemedText>
-          <ThemedText type='defaultSemiBold' style={styles.noCategoriesTitle}>
-            Nenhuma categoria encontrada
-          </ThemedText>
-          <ThemedText style={styles.noCategoriesMessage}>
-            Para criar uma transferência, você precisa primeiro criar pelo menos uma categoria.
-          </ThemedText>
-          <TouchableOpacity style={styles.createCategoryButton} onPress={() => router.push('/categorias/nova')}>
-            <ThemedText style={styles.createCategoryButtonText}>Criar Primeira Categoria</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      </ScrollView>
+  if (loading) {
+    return (
+      <ThemedView style={styles.loadingContainer}>
+        <ThemedText type='title'>Carregando...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!transfer) {
+    return (
+      <ThemedView style={styles.errorContainer}>
+        <ThemedText type='title'>Transferência não encontrada</ThemedText>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <ThemedText style={styles.backButtonText}>Voltar</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
     );
   }
 
@@ -114,7 +119,8 @@ export default function NovaTransferenciaScreen() {
     }
 
     try {
-      await addTransfer({
+      await updateTransfer({
+        ...transfer,
         description: descricao.trim(),
         amount: parsedAmount,
         type: tipo,
@@ -126,7 +132,7 @@ export default function NovaTransferenciaScreen() {
       // Go directly back to the list without confirmation message
       router.back();
     } catch (error) {
-      Alert.alert('Erro', 'Falha ao criar transferência');
+      Alert.alert('Erro', 'Falha ao atualizar transferência');
     }
   };
 
@@ -137,8 +143,8 @@ export default function NovaTransferenciaScreen() {
       showsVerticalScrollIndicator={false}
     >
       <ThemedView style={styles.header}>
-        <ThemedText type='title'>Nova Transferência</ThemedText>
-        <ThemedText type='subtitle'>Registre uma nova transação financeira</ThemedText>
+        <ThemedText type='title'>Editar Transferência</ThemedText>
+        <ThemedText type='subtitle'>Modifique os dados da transação</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.form}>
@@ -241,26 +247,26 @@ export default function NovaTransferenciaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white', // Ensure main container has white background
+    backgroundColor: 'white',
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 120, // Add extra bottom padding to ensure buttons are above tab bar
+    paddingBottom: 120,
   },
   header: {
     alignItems: 'center',
     marginBottom: 30,
     marginTop: 20,
-    backgroundColor: 'white', // Ensure header has white background
+    backgroundColor: 'white',
   },
   form: {
     flex: 1,
     gap: 25,
-    backgroundColor: 'white', // Ensure form has white background
+    backgroundColor: 'white',
   },
   inputGroup: {
     gap: 10,
-    backgroundColor: 'white', // Ensure input groups have white background
+    backgroundColor: 'white',
   },
   input: {
     borderWidth: 1,
@@ -268,7 +274,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     fontSize: 16,
-    backgroundColor: 'white', // Changed to white for consistency
+    backgroundColor: 'white',
   },
   textArea: {
     minHeight: 80,
@@ -287,12 +293,12 @@ const styles = StyleSheet.create({
   radio: {
     width: 20,
     height: 20,
-    borderRadius: 10, // Changed from 4 to 10 for a more rounded look
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: '#007bff',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent', // Use transparent background
+    backgroundColor: 'transparent',
   },
   radioSelected: {
     backgroundColor: '#007bff',
@@ -320,7 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#dee2e6',
-    backgroundColor: 'white', // Changed to white for consistency
+    backgroundColor: 'white',
     gap: 8,
   },
   categoriaButtonActive: {
@@ -341,7 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 15,
     marginTop: 20,
-    marginBottom: 20, // Add bottom margin for extra spacing
+    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
@@ -361,47 +367,35 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#007bff', // Changed from dynamic color to a consistent blue
+    backgroundColor: '#007bff',
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
   },
-  noCategoriesContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
     padding: 20,
     gap: 20,
-    minHeight: 400, // Ensure minimum height for proper centering
   },
-  noCategoriesIcon: {
-    fontSize: 64,
-    marginBottom: 10,
-  },
-  noCategoriesTitle: {
-    fontSize: 20,
-    textAlign: 'center',
-    color: '#6c757d',
-  },
-  noCategoriesMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#6c757d',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  createCategoryButton: {
+  backButton: {
     backgroundColor: '#007bff',
     padding: 15,
     borderRadius: 8,
-    marginTop: 20,
   },
-  createCategoryButtonText: {
+  backButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
   },
 });

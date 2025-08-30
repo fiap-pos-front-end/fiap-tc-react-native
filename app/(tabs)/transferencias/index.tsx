@@ -1,59 +1,32 @@
 import { useRouter } from 'expo-router';
-import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const transferencias = [
-  {
-    id: '1',
-    descricao: 'Salário',
-    valor: 3000.00,
-    tipo: 'receita',
-    categoria: 'Salário',
-    data: '2024-01-15',
-    icone: '💰'
-  },
-  {
-    id: '2',
-    descricao: 'Aluguel',
-    valor: 1200.00,
-    tipo: 'despesa',
-    categoria: 'Moradia',
-    data: '2024-01-10',
-    icone: '🏠'
-  },
-  {
-    id: '3',
-    descricao: 'Supermercado',
-    valor: 450.00,
-    tipo: 'despesa',
-    categoria: 'Alimentação',
-    data: '2024-01-12',
-    icone: '🍽️'
-  },
-  {
-    id: '4',
-    descricao: 'Freelance',
-    valor: 500.00,
-    tipo: 'receita',
-    categoria: 'Freelance',
-    data: '2024-01-08',
-    icone: '💼'
-  },
-  {
-    id: '5',
-    descricao: 'Combustível',
-    valor: 150.00,
-    tipo: 'despesa',
-    categoria: 'Transporte',
-    data: '2024-01-14',
-    icone: '🚗'
-  }
-];
+import { useCategories } from '@/contexts/CategoryContext';
+import { useTransfers } from '@/contexts/TransferContext';
+import { TransactionType, Transfer } from '@/types';
 
 export default function TransferenciasScreen() {
   const router = useRouter();
+  const { transfers, loading, error } = useTransfers();
+  const { categories } = useCategories();
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
+      </ThemedView>
+    );
+  }
 
   const formatarData = (dataString: string) => {
     const data = new Date(dataString);
@@ -67,30 +40,36 @@ export default function TransferenciasScreen() {
     });
   };
 
-  const renderTransferencia = ({ item }: { item: typeof transferencias[0] }) => (
-    <TouchableOpacity
-      style={[styles.transferenciaItem, { borderLeftColor: item.tipo === 'receita' ? '#28a745' : '#dc3545' }]}
-      onPress={() => router.push(`/transferencias/detalhes?id=${item.id}` as any)}
-    >
-      <ThemedView style={styles.transferenciaInfo}>
-        <ThemedText style={styles.icone}>{item.icone}</ThemedText>
-        <ThemedView style={styles.transferenciaText}>
-          <ThemedText type="defaultSemiBold">{item.descricao}</ThemedText>
-          <ThemedText style={styles.categoria}>{item.categoria}</ThemedText>
-          <ThemedText style={styles.data}>{formatarData(item.data)}</ThemedText>
+  const renderTransferencia = ({ item }: { item: Transfer }) => {
+    const category = categories.find(cat => cat.id === item.categoryId);
+
+    return (
+      <TouchableOpacity
+        style={[styles.transferenciaItem, {
+          borderLeftColor: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545'
+        }]}
+        onPress={() => router.push(`/transferencias/detalhes?id=${item.id}` as any)}
+      >
+        <ThemedView style={styles.transferenciaInfo}>
+          <ThemedText style={styles.icone}>{category?.icon || '📊'}</ThemedText>
+          <ThemedView style={styles.transferenciaText}>
+            <ThemedText type="defaultSemiBold">{item.description}</ThemedText>
+            <ThemedText style={styles.categoria}>{category?.name || 'Categoria não encontrada'}</ThemedText>
+            <ThemedText style={styles.data}>{formatarData(item.date)}</ThemedText>
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
-      <ThemedView style={styles.valorContainer}>
-        <ThemedText style={[
-          styles.valor,
-          { color: item.tipo === 'receita' ? '#28a745' : '#dc3545' }
-        ]}>
-          {item.tipo === 'receita' ? '+' : '-'} {formatarValor(item.valor)}
-        </ThemedText>
-        <ThemedText style={styles.arrow}>›</ThemedText>
-      </ThemedView>
-    </TouchableOpacity>
-  );
+        <ThemedView style={styles.valorContainer}>
+          <ThemedText style={[
+            styles.valor,
+            { color: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545' }
+          ]}>
+            {item.type === TransactionType.INCOME ? '+' : '-'} {formatarValor(item.amount)}
+          </ThemedText>
+          <ThemedText style={styles.arrow}>›</ThemedText>
+        </ThemedView>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -100,7 +79,7 @@ export default function TransferenciasScreen() {
       </ThemedView>
 
       <FlatList
-        data={transferencias}
+        data={transfers}
         renderItem={renderTransferencia}
         keyExtractor={(item) => item.id}
         style={styles.list}
@@ -204,5 +183,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28, // Match font size for perfect centering
     includeFontPadding: false, // Remove extra padding on Android
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

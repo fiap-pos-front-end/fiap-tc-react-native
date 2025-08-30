@@ -4,129 +4,107 @@ import { Alert, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const categorias = [
-  { id: '1', nome: 'Moradia', tipo: 'despesa', cor: '#dc3545', icone: '🏠' },
-  { id: '2', nome: 'Alimentação', tipo: 'despesa', cor: '#dc3545', icone: '🍽️' },
-  { id: '3', nome: 'Transporte', tipo: 'despesa', cor: '#dc3545', icone: '🚗' },
-  { id: '4', nome: 'Lazer', tipo: 'despesa', cor: '#dc3545', icone: '🎮' },
-  { id: '5', nome: 'Salário', tipo: 'receita', cor: '#28a745', icone: '💰' },
-  { id: '6', nome: 'Freelance', tipo: 'receita', cor: '#28a745', icone: '💼' },
-  { id: '7', nome: 'Investimentos', tipo: 'receita', cor: '#28a745', icone: '📈' },
-];
+import { getRandomIcon } from '@/constants/Icons';
+import { useCategories } from '@/contexts/CategoryContext';
+import { Category, TransactionType } from '@/types';
 
 export default function EditarCategoriaScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { getCategoryById, updateCategory, loading } = useCategories();
 
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
-  const [icone, setIcone] = useState('');
+  const [tipo, setTipo] = useState<TransactionType>(TransactionType.EXPENSE);
+  const [originalCategory, setOriginalCategory] = useState<Category | null>(null);
 
   useEffect(() => {
     if (id) {
-      const categoria = categorias.find(cat => cat.id === id);
+      const categoria = getCategoryById(id);
       if (categoria) {
-        setNome(categoria.nome);
-        setTipo(categoria.tipo as 'receita' | 'despesa');
-        setIcone(categoria.icone);
+        setOriginalCategory(categoria);
+        setNome(categoria.name);
+        setTipo(categoria.type);
       }
     }
-  }, [id]);
+  }, [id, getCategoryById]);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!nome.trim()) {
       Alert.alert('Erro', 'Por favor, insira um nome para a categoria');
       return;
     }
 
-    if (!icone.trim()) {
-      Alert.alert('Erro', 'Por favor, insira um ícone para a categoria');
+    if (!id) {
+      Alert.alert('Erro', 'ID da categoria não encontrado');
       return;
     }
 
-    // Aqui você implementaria a lógica para atualizar a categoria
-    Alert.alert('Sucesso', 'Categoria atualizada com sucesso!', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+    try {
+      // Only update the icon if the type has changed
+      let iconToUse = originalCategory?.icon || '';
+      if (originalCategory && tipo !== originalCategory.type) {
+        // Type changed, assign a new random icon
+        iconToUse = getRandomIcon(tipo);
+      }
+
+      const updatedCategory = {
+        id,
+        name: nome.trim(),
+        type: tipo,
+        icon: iconToUse,
+      } as Category;
+
+      await updateCategory(updatedCategory);
+      // Go directly back to the list without confirmation message
+      router.back();
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao atualizar categoria');
+    }
   };
 
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Editar Categoria</ThemedText>
-        <ThemedText type="subtitle">Modifique os dados da categoria</ThemedText>
+        <ThemedText type='title'>Editar Categoria</ThemedText>
+        <ThemedText type='subtitle'>Modifique os dados da categoria</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.form}>
         <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Nome da Categoria</ThemedText>
+          <ThemedText type='defaultSemiBold'>Nome da Categoria</ThemedText>
           <TextInput
             style={styles.input}
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex: Alimentação"
-            placeholderTextColor="#6c757d"
+            placeholder='Ex: Alimentação'
+            placeholderTextColor='#6c757d'
           />
         </ThemedView>
 
         <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Tipo</ThemedText>
+          <ThemedText type='defaultSemiBold'>Tipo</ThemedText>
           <ThemedView style={styles.tipoContainer}>
-            <TouchableOpacity
-              style={styles.tipoRadio}
-              onPress={() => setTipo('despesa')}
-            >
-              <ThemedView style={[
-                styles.radio,
-                tipo === 'despesa' && styles.radioSelected
-              ]}>
-                {tipo === 'despesa' && (
-                  <ThemedView style={styles.radioDot} />
-                )}
+            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.EXPENSE)}>
+              <ThemedView style={[styles.radio, tipo === TransactionType.EXPENSE && styles.radioSelected]}>
+                {tipo === TransactionType.EXPENSE && <ThemedView style={styles.radioDot} />}
               </ThemedView>
               <ThemedText style={styles.tipoLabel}>Despesa</ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tipoRadio}
-              onPress={() => setTipo('receita')}
-            >
-              <ThemedView style={[
-                styles.radio,
-                tipo === 'receita' && styles.radioSelected
-              ]}>
-                {tipo === 'receita' && (
-                  <ThemedView style={styles.radioDot} />
-                )}
+            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.INCOME)}>
+              <ThemedView style={[styles.radio, tipo === TransactionType.INCOME && styles.radioSelected]}>
+                {tipo === TransactionType.INCOME && <ThemedView style={styles.radioDot} />}
               </ThemedView>
               <ThemedText style={styles.tipoLabel}>Receita</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         </ThemedView>
 
-        <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Ícone (emoji)</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={icone}
-            onChangeText={setIcone}
-            placeholder="Ex: 🍽️"
-            placeholderTextColor="#6c757d"
-          />
-        </ThemedView>
-
         <ThemedView style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
             <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSalvar}
-          >
+          <TouchableOpacity style={styles.saveButton} onPress={handleSalvar}>
             <ThemedText style={styles.saveButtonText}>Salvar</ThemedText>
           </TouchableOpacity>
         </ThemedView>

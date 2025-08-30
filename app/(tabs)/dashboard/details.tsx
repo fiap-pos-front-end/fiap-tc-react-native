@@ -1,59 +1,87 @@
-import { StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 export default function DashboardDetailsScreen() {
+  const { dashboardData, loading, error } = useDashboard();
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size='large' color='#007bff' />
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.errorText}>Error: {error}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Detalhes Financeiros</ThemedText>
-        <ThemedText type="subtitle">Análise detalhada das suas transações</ThemedText>
+        <ThemedText type='title'>Detalhes Financeiros</ThemedText>
+        <ThemedText type='subtitle'>Análise detalhada das suas transações</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.content}>
         <ThemedView style={styles.section}>
-          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          <ThemedText type='defaultSemiBold' style={styles.sectionTitle}>
             Receitas por Categoria
           </ThemedText>
-          <ThemedView style={styles.item}>
-            <ThemedText>Salário</ThemedText>
-            <ThemedText style={styles.income}>R$ 3.000,00</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.item}>
-            <ThemedText>Freelance</ThemedText>
-            <ThemedText style={styles.income}>R$ 500,00</ThemedText>
-          </ThemedView>
+          {dashboardData.incomeByCategory.length > 0 ? (
+            dashboardData.incomeByCategory.map((item, index) => (
+              <ThemedView key={index} style={styles.item}>
+                <ThemedView style={styles.itemLeft}>
+                  <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>
+                  <ThemedText>{item.categoryName}</ThemedText>
+                </ThemedView>
+                <ThemedText style={styles.income}>{formatCurrency(item.amount)}</ThemedText>
+              </ThemedView>
+            ))
+          ) : (
+            <ThemedText style={styles.noData}>Nenhum dado de receita disponível</ThemedText>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.section}>
-          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          <ThemedText type='defaultSemiBold' style={styles.sectionTitle}>
             Despesas por Categoria
           </ThemedText>
-          <ThemedView style={styles.item}>
-            <ThemedText>Moradia</ThemedText>
-            <ThemedText style={styles.expense}>R$ 1.200,00</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.item}>
-            <ThemedText>Alimentação</ThemedText>
-            <ThemedText style={styles.expense}>R$ 600,00</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.item}>
-            <ThemedText>Transporte</ThemedText>
-            <ThemedText style={styles.expense}>R$ 300,00</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.item}>
-            <ThemedText>Lazer</ThemedText>
-            <ThemedText style={styles.expense}>R$ 150,00</ThemedText>
-          </ThemedView>
+          {dashboardData.expenseByCategory.length > 0 ? (
+            dashboardData.expenseByCategory.map((item, index) => (
+              <ThemedView key={index} style={styles.item}>
+                <ThemedView style={styles.itemLeft}>
+                  <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>
+                  <ThemedText>{item.categoryName}</ThemedText>
+                </ThemedView>
+                <ThemedText style={styles.expense}>{formatCurrency(item.amount)}</ThemedText>
+              </ThemedView>
+            ))
+          ) : (
+            <ThemedText style={styles.noData}>Nenhum dado de despesa disponível</ThemedText>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.summary}>
-          <ThemedText type="defaultSemiBold">Resumo</ThemedText>
-          <ThemedText>Receitas: R$ 3.500,00</ThemedText>
-          <ThemedText>Despesas: R$ 2.250,00</ThemedText>
-          <ThemedText type="defaultSemiBold" style={styles.savings}>
-            Economia: R$ 1.250,00
+          <ThemedText type='defaultSemiBold'>Resumo</ThemedText>
+          <ThemedText>Receitas: {formatCurrency(dashboardData.monthlyIncome)}</ThemedText>
+          <ThemedText>Despesas: {formatCurrency(dashboardData.monthlyExpense)}</ThemedText>
+          <ThemedText type='defaultSemiBold' style={styles.savings}>
+            Economia: {formatCurrency(dashboardData.savings)}
           </ThemedText>
         </ThemedView>
       </ThemedView>
@@ -110,5 +138,26 @@ const styles = StyleSheet.create({
     color: '#28a745',
     fontSize: 18,
     marginTop: 10,
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  itemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f8f9fa',
+  },
+  itemIcon: {
+    fontSize: 20,
+  },
+  noData: {
+    textAlign: 'center',
+    color: '#6c757d',
+    fontStyle: 'italic',
+    padding: 20,
   },
 });

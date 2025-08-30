@@ -9,7 +9,7 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <ThemedView style={styles.container}>
-        <ThemedText type="title">This screen does not exist.</ThemedText>
+        <ThemedText type="title" style={styles.title}>This screen does not exist.</ThemedText>
         <Link href="/(tabs)/dashboard" style={styles.link}>
           <ThemedText type="link">Go to home screen!</ThemedText>
         </Link>
@@ -24,6 +24,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  title: {
+    textAlign: 'center',
   },
   link: {
     marginTop: 15,

@@ -4,111 +4,82 @@ import { Alert, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { getRandomIcon } from '@/constants/Icons';
+import { useCategories } from '@/contexts/CategoryContext';
+import { TransactionType } from '@/types';
 
 export default function NovaCategoriaScreen() {
   const router = useRouter();
+  const { addCategory } = useCategories();
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
-  const [icone, setIcone] = useState('');
+  const [tipo, setTipo] = useState<TransactionType>(TransactionType.EXPENSE);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!nome.trim()) {
       Alert.alert('Erro', 'Por favor, insira um nome para a categoria');
       return;
     }
 
-    if (!icone.trim()) {
-      Alert.alert('Erro', 'Por favor, insira um ícone para a categoria');
-      return;
-    }
+    try {
+      // Automatically assign a random icon based on transaction type
+      const randomIcon = getRandomIcon(tipo);
 
-    // Aqui você implementaria a lógica para salvar a categoria
-    Alert.alert('Sucesso', 'Categoria criada com sucesso!', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+      await addCategory({
+        name: nome.trim(),
+        type: tipo,
+        icon: randomIcon,
+      });
+
+      // Go directly back to the list without confirmation message
+      router.back();
+    } catch {
+      Alert.alert('Error', 'Falha ao criar categoria');
+    }
   };
 
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Nova Categoria</ThemedText>
-        <ThemedText type="subtitle">Crie uma nova categoria financeira</ThemedText>
+        <ThemedText type='title'>Nova Categoria</ThemedText>
+        <ThemedText type='subtitle'>Crie uma nova categoria financeira</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.form}>
         <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Nome da Categoria</ThemedText>
+          <ThemedText type='defaultSemiBold'>Nome da Categoria</ThemedText>
           <TextInput
             style={styles.input}
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex: Alimentação"
-            placeholderTextColor="#6c757d"
+            placeholder='Ex: Alimentação'
+            placeholderTextColor='#6c757d'
           />
         </ThemedView>
 
         <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Tipo</ThemedText>
+          <ThemedText type='defaultSemiBold'>Type</ThemedText>
           <ThemedView style={styles.tipoContainer}>
-            <TouchableOpacity
-              style={styles.tipoRadio}
-              onPress={() => setTipo('despesa')}
-            >
-              <ThemedView style={[
-                styles.radio,
-                tipo === 'despesa' && styles.radioSelected
-              ]}>
-                {tipo === 'despesa' && (
-                  <ThemedView style={styles.radioDot} />
-                )}
+            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.EXPENSE)}>
+              <ThemedView style={[styles.radio, tipo === TransactionType.EXPENSE && styles.radioSelected]}>
+                {tipo === TransactionType.EXPENSE && <ThemedView style={styles.radioDot} />}
               </ThemedView>
               <ThemedText style={styles.tipoLabel}>Despesa</ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.tipoRadio}
-              onPress={() => setTipo('receita')}
-            >
-              <ThemedView style={[
-                styles.radio,
-                tipo === 'receita' && styles.radioSelected
-              ]}>
-                {tipo === 'receita' && (
-                  <ThemedView style={styles.radioDot} />
-                )}
+            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.INCOME)}>
+              <ThemedView style={[styles.radio, tipo === TransactionType.INCOME && styles.radioSelected]}>
+                {tipo === TransactionType.INCOME && <ThemedView style={styles.radioDot} />}
               </ThemedView>
               <ThemedText style={styles.tipoLabel}>Receita</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         </ThemedView>
 
-        <ThemedView style={styles.inputGroup}>
-          <ThemedText type="defaultSemiBold">Ícone (emoji)</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={icone}
-            onChangeText={setIcone}
-            placeholder="Ex: 🍽️"
-            placeholderTextColor="#6c757d"
-          />
-          {icone && (
-            <ThemedText style={styles.iconePreview}>
-              Visualização: {icone}
-            </ThemedText>
-          )}
-        </ThemedView>
-
         <ThemedView style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
             <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSalvar}
-          >
+          <TouchableOpacity style={styles.saveButton} onPress={handleSalvar}>
             <ThemedText style={styles.saveButtonText}>Salvar</ThemedText>
           </TouchableOpacity>
         </ThemedView>
@@ -174,11 +145,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  iconePreview: {
-    textAlign: 'center',
-    fontSize: 24,
-    marginTop: 10,
-  },
+
   buttonContainer: {
     flexDirection: 'row',
     gap: 15,
