@@ -1,12 +1,11 @@
 export enum TransactionType {
   INCOME = 'income',
-  EXPENSE = 'expense'
+  EXPENSE = 'expense',
 }
 
 export interface Category {
   id: string;
   name: string;
-  type: TransactionType;
   icon: string;
 }
 

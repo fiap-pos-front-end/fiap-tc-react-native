@@ -6,13 +6,11 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { getRandomIcon } from '@/constants/Icons';
 import { useCategories } from '@/contexts/CategoryContext';
-import { TransactionType } from '@/types';
 
 export default function NovaCategoriaScreen() {
   const router = useRouter();
   const { addCategory } = useCategories();
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState<TransactionType>(TransactionType.EXPENSE);
 
   const handleSalvar = async () => {
     if (!nome.trim()) {
@@ -21,12 +19,11 @@ export default function NovaCategoriaScreen() {
     }
 
     try {
-      // Automatically assign a random icon based on transaction type
-      const randomIcon = getRandomIcon(tipo);
+      // Automatically assign a random icon
+      const randomIcon = getRandomIcon();
 
       await addCategory({
         name: nome.trim(),
-        type: tipo,
         icon: randomIcon,
       });
 
@@ -54,25 +51,6 @@ export default function NovaCategoriaScreen() {
             placeholder='Ex: Alimentação'
             placeholderTextColor='#6c757d'
           />
-        </ThemedView>
-
-        <ThemedView style={styles.inputGroup}>
-          <ThemedText type='defaultSemiBold'>Type</ThemedText>
-          <ThemedView style={styles.tipoContainer}>
-            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.EXPENSE)}>
-              <ThemedView style={[styles.radio, tipo === TransactionType.EXPENSE && styles.radioSelected]}>
-                {tipo === TransactionType.EXPENSE && <ThemedView style={styles.radioDot} />}
-              </ThemedView>
-              <ThemedText style={styles.tipoLabel}>Despesa</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.INCOME)}>
-              <ThemedView style={[styles.radio, tipo === TransactionType.INCOME && styles.radioSelected]}>
-                {tipo === TransactionType.INCOME && <ThemedView style={styles.radioDot} />}
-              </ThemedView>
-              <ThemedText style={styles.tipoLabel}>Receita</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
         </ThemedView>
 
         <ThemedView style={styles.buttonContainer}>

@@ -4,7 +4,6 @@ import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useCategories } from '@/contexts/CategoryContext';
-import { TransactionType } from '@/types';
 
 export default function CategoriasScreen() {
   const router = useRouter();
@@ -13,7 +12,7 @@ export default function CategoriasScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size='large' color='#007bff' />
       </ThemedView>
     );
   }
@@ -28,26 +27,13 @@ export default function CategoriasScreen() {
 
   const renderCategoria = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[
-        styles.categoriaItem,
-        {
-          borderLeftColor: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545'
-        }
-      ]}
+      style={styles.categoriaItem}
       onPress={() => router.push(`/categorias/detalhes?id=${item.id}` as any)}
     >
       <ThemedView style={styles.categoriaInfo}>
         <ThemedText style={styles.icone}>{item.icon}</ThemedText>
         <ThemedView style={styles.categoriaText}>
-          <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
-          <ThemedText style={[
-            styles.tipo,
-            {
-              color: item.type === TransactionType.INCOME ? '#28a745' : '#dc3545'
-            }
-          ]}>
-            {item.type === TransactionType.INCOME ? 'Receita' : 'Despesa'}
-          </ThemedText>
+          <ThemedText type='defaultSemiBold'>{item.name}</ThemedText>
         </ThemedView>
       </ThemedView>
       <ThemedText style={styles.arrow}>›</ThemedText>
@@ -57,8 +43,8 @@ export default function CategoriasScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Categorias</ThemedText>
-        <ThemedText type="subtitle">Gerencie suas categorias financeiras</ThemedText>
+        <ThemedText type='title'>Categorias</ThemedText>
+        <ThemedText type='subtitle'>Gerencie suas categorias financeiras</ThemedText>
       </ThemedView>
 
       <FlatList
@@ -70,10 +56,7 @@ export default function CategoriasScreen() {
       />
 
       {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/categorias/nova' as any)}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/categorias/nova' as any)}>
         <ThemedText style={styles.fabText}>+</ThemedText>
       </TouchableOpacity>
     </ThemedView>
@@ -101,13 +84,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa', // Light gray background for each item
     borderRadius: 8,
     marginBottom: 10,
-    borderLeftWidth: 4,
   },
   categoriaInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f8f9fa',
   },
   icone: {
     fontSize: 24,
@@ -116,11 +98,7 @@ const styles = StyleSheet.create({
   categoriaText: {
     flex: 1,
     gap: 4,
-    backgroundColor: '#f8f9fa'
-  },
-  tipo: {
-    fontSize: 12,
-    textTransform: 'capitalize',
+    backgroundColor: '#f8f9fa',
   },
   arrow: {
     fontSize: 20,

@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-na
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useCategories } from '@/contexts/CategoryContext';
-import { Category, TransactionType } from '@/types';
+import { Category } from '@/types';
 
 export default function CategoriaDetalhesScreen() {
   const router = useRouter();
@@ -25,34 +25,29 @@ export default function CategoriaDetalhesScreen() {
   }, [id, getCategoryById, categories]);
 
   const handleExcluir = () => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      'Tem certeza que deseja excluir esta categoria?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            if (!categoria) return;
-            try {
-              await deleteCategory(categoria.id);
-              Alert.alert('Sucesso', 'Categoria excluída com sucesso!', [
-                { text: 'OK', onPress: () => router.back() }
-              ]);
-            } catch (error) {
-              Alert.alert('Erro', 'Falha ao excluir categoria');
-            }
+    Alert.alert('Confirmar Exclusão', 'Tem certeza que deseja excluir esta categoria?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          if (!categoria) return;
+          try {
+            await deleteCategory(categoria.id);
+            // Go directly back to the list without confirmation message
+            router.back();
+          } catch (error) {
+            Alert.alert('Erro', 'Falha ao excluir categoria');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size='large' color='#007bff' />
         <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
       </ThemedView>
     );
@@ -63,10 +58,7 @@ export default function CategoriaDetalhesScreen() {
       <ThemedView style={[styles.container, styles.centerContent]}>
         <ThemedText style={styles.errorText}>Categoria não encontrada</ThemedText>
         <ThemedText style={styles.errorSubtext}>ID: {id}</ThemedText>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ThemedText style={styles.backButtonText}>Voltar</ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -77,27 +69,15 @@ export default function CategoriaDetalhesScreen() {
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
         <ThemedText style={styles.icone}>{categoria.icon}</ThemedText>
-        <ThemedText type="title">{categoria.name}</ThemedText>
+        <ThemedText type='title'>{categoria.name}</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.content}>
         <ThemedView style={styles.infoSection}>
           <ThemedView style={styles.infoItem}>
-            <ThemedText type="defaultSemiBold">Nome</ThemedText>
+            <ThemedText type='defaultSemiBold'>Nome</ThemedText>
             <ThemedText>{categoria.name}</ThemedText>
           </ThemedView>
-
-          <ThemedView style={styles.infoItem}>
-            <ThemedText type="defaultSemiBold">Tipo</ThemedText>
-            <ThemedText style={{
-              color: categoria.type === TransactionType.INCOME ? '#28a745' : '#dc3545',
-              textTransform: 'capitalize'
-            }}>
-              {categoria.type === TransactionType.INCOME ? 'Receita' : 'Despesa'}
-            </ThemedText>
-          </ThemedView>
-
-
         </ThemedView>
 
         <ThemedView style={styles.actions}>
@@ -108,10 +88,7 @@ export default function CategoriaDetalhesScreen() {
             <ThemedText style={styles.editButtonText}>Editar</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleExcluir}
-          >
+          <TouchableOpacity style={styles.deleteButton} onPress={handleExcluir}>
             <ThemedText style={styles.deleteButtonText}>Excluir</ThemedText>
           </TouchableOpacity>
         </ThemedView>

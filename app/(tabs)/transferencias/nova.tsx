@@ -84,7 +84,7 @@ export default function NovaTransferenciaScreen() {
     );
   }
 
-  const categoriasFiltradas = categories.filter((cat) => cat.type === tipo);
+  const categoriasFiltradas = categories;
 
   const handleSalvar = async () => {
     if (!descricao.trim()) {

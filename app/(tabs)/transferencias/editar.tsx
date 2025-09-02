@@ -89,7 +89,7 @@ export default function EditarTransferenciaScreen() {
     );
   }
 
-  const categoriasFiltradas = categories.filter((cat) => cat.type === tipo);
+  const categoriasFiltradas = categories;
 
   const handleSalvar = async () => {
     if (!descricao.trim()) {

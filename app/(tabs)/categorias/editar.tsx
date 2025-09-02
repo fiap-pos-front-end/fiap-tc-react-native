@@ -4,9 +4,8 @@ import { Alert, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { getRandomIcon } from '@/constants/Icons';
 import { useCategories } from '@/contexts/CategoryContext';
-import { Category, TransactionType } from '@/types';
+import { Category } from '@/types';
 
 export default function EditarCategoriaScreen() {
   const router = useRouter();
@@ -14,7 +13,6 @@ export default function EditarCategoriaScreen() {
   const { getCategoryById, updateCategory, loading } = useCategories();
 
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState<TransactionType>(TransactionType.EXPENSE);
   const [originalCategory, setOriginalCategory] = useState<Category | null>(null);
 
   useEffect(() => {
@@ -23,7 +21,6 @@ export default function EditarCategoriaScreen() {
       if (categoria) {
         setOriginalCategory(categoria);
         setNome(categoria.name);
-        setTipo(categoria.type);
       }
     }
   }, [id, getCategoryById]);
@@ -40,18 +37,10 @@ export default function EditarCategoriaScreen() {
     }
 
     try {
-      // Only update the icon if the type has changed
-      let iconToUse = originalCategory?.icon || '';
-      if (originalCategory && tipo !== originalCategory.type) {
-        // Type changed, assign a new random icon
-        iconToUse = getRandomIcon(tipo);
-      }
-
       const updatedCategory = {
         id,
         name: nome.trim(),
-        type: tipo,
-        icon: iconToUse,
+        icon: originalCategory?.icon || '📊',
       } as Category;
 
       await updateCategory(updatedCategory);
@@ -79,25 +68,6 @@ export default function EditarCategoriaScreen() {
             placeholder='Ex: Alimentação'
             placeholderTextColor='#6c757d'
           />
-        </ThemedView>
-
-        <ThemedView style={styles.inputGroup}>
-          <ThemedText type='defaultSemiBold'>Tipo</ThemedText>
-          <ThemedView style={styles.tipoContainer}>
-            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.EXPENSE)}>
-              <ThemedView style={[styles.radio, tipo === TransactionType.EXPENSE && styles.radioSelected]}>
-                {tipo === TransactionType.EXPENSE && <ThemedView style={styles.radioDot} />}
-              </ThemedView>
-              <ThemedText style={styles.tipoLabel}>Despesa</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.tipoRadio} onPress={() => setTipo(TransactionType.INCOME)}>
-              <ThemedView style={[styles.radio, tipo === TransactionType.INCOME && styles.radioSelected]}>
-                {tipo === TransactionType.INCOME && <ThemedView style={styles.radioDot} />}
-              </ThemedView>
-              <ThemedText style={styles.tipoLabel}>Receita</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
         </ThemedView>
 
         <ThemedView style={styles.buttonContainer}>

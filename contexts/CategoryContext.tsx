@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { Category, TransactionType } from '../types';
+import { Category } from '../types';
 import { storage } from '../utils/storage';
 
 interface CategoryContextType {
@@ -10,7 +10,6 @@ interface CategoryContextType {
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   getCategoryById: (id: string) => Category | undefined;
-  getCategoriesByType: (type: TransactionType) => Category[];
   loadCategories: () => Promise<void>;
   seedCategories: () => Promise<void>;
 }
@@ -89,10 +88,6 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
     return categories.find((cat) => cat.id === id);
   };
 
-  const getCategoriesByType = (type: TransactionType): Category[] => {
-    return categories.filter((cat) => cat.type === type);
-  };
-
   const seedCategories = async () => {
     try {
       setLoading(true);
@@ -120,7 +115,6 @@ export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) 
     updateCategory,
     deleteCategory,
     getCategoryById,
-    getCategoriesByType,
     loadCategories,
     seedCategories,
   };
