@@ -1,123 +1,42 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { Category } from '../types';
-import { storage } from '../utils/storage';
+import { Category } from "@/types";
+import React, { createContext, ReactNode, useContext } from "react";
+import { useCategories as useFirebaseCategories } from "../hooks/useCategories";
 
 interface CategoryContextType {
   categories: Category[];
   loading: boolean;
   error: string | null;
-  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  addCategory: (
+    categoryData: Omit<Category, "id" | "created">
+  ) => Promise<string>;
   updateCategory: (category: Category) => Promise<void>;
-  deleteCategory: (id: string) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
   getCategoryById: (id: string) => Category | undefined;
-  loadCategories: () => Promise<void>;
-  seedCategories: () => Promise<void>;
+  searchCategories: (searchTerm: string) => Category[];
 }
 
-const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
-
-export const useCategories = () => {
-  const context = useContext(CategoryContext);
-  if (!context) {
-    throw new Error('useCategories must be used within a CategoryProvider');
-  }
-  return context;
-};
+const CategoryContext = createContext<CategoryContextType | undefined>(
+  undefined
+);
 
 interface CategoryProviderProps {
   children: ReactNode;
 }
 
-export const CategoryProvider: React.FC<CategoryProviderProps> = ({ children }) => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function CategoryProvider({ children }: CategoryProviderProps) {
+  const categoryData = useFirebaseCategories();
 
-  const loadCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const categoriesData = await storage.getCategories();
-      setCategories(categoriesData);
-    } catch (error) {
-      setError('Failed to load categories');
-    } finally {
-      setLoading(false);
-    }
-  };
+  return (
+    <CategoryContext.Provider value={categoryData}>
+      {children}
+    </CategoryContext.Provider>
+  );
+}
 
-  const addCategory = async (categoryData: Omit<Category, 'id'>) => {
-    try {
-      const newCategory: Category = {
-        ...categoryData,
-        id: Date.now().toString(),
-      };
-
-      const updatedCategories = [...categories, newCategory];
-      await storage.saveCategories(updatedCategories);
-      setCategories(updatedCategories);
-    } catch (error) {
-      setError('Failed to add category');
-      throw error;
-    }
-  };
-
-  const updateCategory = async (category: Category) => {
-    try {
-      const updatedCategories = categories.map((cat) => (cat.id === category.id ? category : cat));
-      await storage.saveCategories(updatedCategories);
-      setCategories(updatedCategories);
-    } catch (error) {
-      setError('Failed to update category');
-      throw error;
-    }
-  };
-
-  const deleteCategory = async (id: string) => {
-    try {
-      const updatedCategories = categories.filter((cat) => cat.id !== id);
-      await storage.saveCategories(updatedCategories);
-      setCategories(updatedCategories);
-    } catch (error) {
-      setError('Failed to delete category');
-      throw error;
-    }
-  };
-
-  const getCategoryById = (id: string): Category | undefined => {
-    return categories.find((cat) => cat.id === id);
-  };
-
-  const seedCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { seedData } = await import('../utils/seedData');
-      await storage.saveCategories(seedData.categories);
-      setCategories(seedData.categories);
-    } catch (error) {
-      setError('Failed to seed categories');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const value: CategoryContextType = {
-    categories,
-    loading,
-    error,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    getCategoryById,
-    loadCategories,
-    seedCategories,
-  };
-
-  return <CategoryContext.Provider value={value}>{children}</CategoryContext.Provider>;
-};
+export function useCategories(): CategoryContextType {
+  const context = useContext(CategoryContext);
+  if (context === undefined) {
+    throw new Error("useCategories must be used within a CategoryProvider");
+  }
+  return context;
+}

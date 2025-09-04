@@ -1,12 +1,14 @@
 export enum TransactionType {
-  INCOME = 'income',
-  EXPENSE = 'expense',
+  INCOME = "income",
+  EXPENSE = "expense",
 }
 
 export interface Category {
   id: string;
   name: string;
   icon: string;
+  created: Date;
+  updated?: Date;
 }
 
 export interface Transfer {
@@ -24,6 +26,6 @@ export interface DashboardData {
   monthlyIncome: number;
   monthlyExpense: number;
   savings: number;
-  incomeByCategory: Array<{ categoryName: string; amount: number; icon: string }>;
-  expenseByCategory: Array<{ categoryName: string; amount: number; icon: string }>;
+  incomeByCategory: { categoryName: string; amount: number; icon: string }[];
+  expenseByCategory: { categoryName: string; amount: number; icon: string }[];
 }

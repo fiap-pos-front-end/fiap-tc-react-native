@@ -1,206 +1,259 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useCategories } from "@/contexts/CategoryContext";
+import { Category } from "@/types";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useCategories } from '@/contexts/CategoryContext';
-import { Category } from '@/types';
-
-export default function CategoriaDetalhesScreen() {
+export default function DetalhesCategoriaScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { categories, getCategoryById, loading, deleteCategory } = useCategories();
-  const [categoria, setCategoria] = useState<Category | null>(null);
+  const { getCategoryById, deleteCategory, loading } = useCategories();
+  const [category, setCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    if (id && categories.length > 0) {
-      const found = getCategoryById(id);
-      if (found) {
-        setCategoria(found);
+    if (id) {
+      const categoria = getCategoryById(id);
+      if (categoria) {
+        setCategory(categoria);
       } else {
-        setCategoria(null);
+        Alert.alert("Erro", "Categoria não encontrada", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
       }
     }
-  }, [id, getCategoryById, categories]);
+  }, [id, getCategoryById]);
 
-  const handleExcluir = () => {
-    Alert.alert('Confirmar Exclusão', 'Tem certeza que deseja excluir esta categoria?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          if (!categoria) return;
-          try {
-            await deleteCategory(categoria.id);
-            // Go directly back to the list without confirmation message
-            router.back();
-          } catch (error) {
-            Alert.alert('Erro', 'Falha ao excluir categoria');
-          }
+  const handleDelete = () => {
+    if (!category) return;
+
+    Alert.alert(
+      "Excluir Categoria",
+      `Tem certeza que deseja excluir a categoria "${category.name}"?\n\nEsta ação não pode ser desfeita.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCategory(category.id);
+              Alert.alert("Sucesso", "Categoria excluída com sucesso!", [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/categorias" as any),
+                },
+              ]);
+            } catch (error) {
+              Alert.alert("Erro", "Falha ao excluir categoria");
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
-  if (loading) {
-    return (
-      <ThemedView style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size='large' color='#007bff' />
-        <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
-      </ThemedView>
-    );
-  }
+  const handleEdit = () => {
+    if (category) {
+      router.push(`/categorias/editar?id=${category.id}` as any);
+    }
+  };
 
-  if (!categoria) {
+  if (!category) {
     return (
-      <ThemedView style={[styles.container, styles.centerContent]}>
-        <ThemedText style={styles.errorText}>Categoria não encontrada</ThemedText>
-        <ThemedText style={styles.errorSubtext}>ID: {id}</ThemedText>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ThemedText style={styles.backButtonText}>Voltar</ThemedText>
-        </TouchableOpacity>
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.loadingText}>
+          Carregando detalhes...
+        </ThemedText>
       </ThemedView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.icone}>{categoria.icon}</ThemedText>
-        <ThemedText type='title'>{categoria.name}</ThemedText>
-      </ThemedView>
-
+    <ScrollView style={styles.container}>
       <ThemedView style={styles.content}>
+        {/* Header com ícone e nome */}
+        <ThemedView style={styles.header}>
+          <ThemedView style={styles.iconContainer}>
+            <ThemedText style={styles.icon}>{category.icon}</ThemedText>
+          </ThemedView>
+          <ThemedText type="title" style={styles.title}>
+            {category.name}
+          </ThemedText>
+        </ThemedView>
+
+        {/* Informações da categoria */}
         <ThemedView style={styles.infoSection}>
-          <ThemedView style={styles.infoItem}>
-            <ThemedText type='defaultSemiBold'>Nome</ThemedText>
-            <ThemedText>{categoria.name}</ThemedText>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Informações
+          </ThemedText>
+
+          <ThemedView style={styles.infoCard}>
+            <ThemedView style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Nome:</ThemedText>
+              <ThemedText style={styles.infoValue}>{category.name}</ThemedText>
+            </ThemedView>
+
+            <ThemedView style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Ícone:</ThemedText>
+              <ThemedText style={styles.infoValue}>{category.icon}</ThemedText>
+            </ThemedView>
+
+            <ThemedView style={styles.infoRow}>
+              <ThemedText style={styles.infoLabel}>Criado em:</ThemedText>
+              <ThemedText style={styles.infoValue}>
+                {category.created?.toLocaleDateString?.("pt-BR") || "N/A"}
+              </ThemedText>
+            </ThemedView>
+
+            {category.updated && (
+              <ThemedView style={styles.infoRow}>
+                <ThemedText style={styles.infoLabel}>Atualizado em:</ThemedText>
+                <ThemedText style={styles.infoValue}>
+                  {category.updated?.toLocaleDateString?.("pt-BR")}
+                </ThemedText>
+              </ThemedView>
+            )}
           </ThemedView>
         </ThemedView>
 
-        <ThemedView style={styles.actions}>
+        {/* Botões de ação */}
+        <ThemedView style={styles.actionsSection}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => router.push(`/categorias/editar?id=${categoria.id}` as any)}
+            onPress={handleEdit}
+            disabled={loading}
           >
-            <ThemedText style={styles.editButtonText}>Editar</ThemedText>
+            <ThemedText style={styles.editButtonText}>✏️ Editar</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteButton} onPress={handleExcluir}>
-            <ThemedText style={styles.deleteButtonText}>Excluir</ThemedText>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={loading}
+          >
+            <ThemedText style={styles.deleteButtonText}>🗑️ Excluir</ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
-    </ThemedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    paddingTop: 20, // Reduced from 40 to 20 for less space above
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 10, // Reduced from 20 to 10 for less space above icon
-    minHeight: 120, // Reduced from 140 to 120 for more compact header
-  },
-  icone: {
-    fontSize: 56, // Increased icon size for better visibility
-    marginBottom: 15, // Reduced from 20 to 15 for less space below icon
-    textAlign: 'center', // Ensure icon is centered
-    marginTop: 5, // Reduced from 10 to 5 for less space above icon
-    minHeight: 60, // Ensure icon container has proper height
-    lineHeight: 56, // Match font size for proper vertical centering
+    backgroundColor: "#f8f9fa",
   },
   content: {
-    flex: 1,
-    gap: 25,
-    paddingBottom: 40, // Add bottom padding for better spacing
+    padding: 20,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 30,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#e3f2fd",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  icon: {
+    fontSize: 40,
+  },
+  title: {
+    textAlign: "center",
+    color: "#333",
   },
   infoSection: {
-    gap: 15,
+    marginBottom: 25,
   },
-  infoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15, // Increased padding for better touch targets
-    paddingHorizontal: 15,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    minHeight: 50, // Ensure minimum height for info items
+  sectionTitle: {
+    marginBottom: 15,
+    color: "#333",
+    fontWeight: "600",
   },
-
-  actions: {
-    flexDirection: 'row',
+  infoCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: "#666",
+    fontWeight: "500",
+  },
+  infoValue: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "right",
+  },
+  actionsSection: {
     gap: 15,
-    marginTop: 20,
-    marginBottom: 20, // Add bottom margin for better spacing
   },
   editButton: {
-    flex: 1,
-    backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    minHeight: 50, // Ensure minimum height for buttons
+    backgroundColor: "#007bff",
+    borderRadius: 12,
+    padding: 18,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   editButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
   },
   deleteButton: {
-    flex: 1,
-    backgroundColor: '#dc3545',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    minHeight: 50, // Ensure minimum height for buttons
+    backgroundColor: "#dc3545",
+    borderRadius: 12,
+    padding: 18,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   deleteButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorText: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '600',
-    color: '#dc3545',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: '#6c757d',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    minHeight: 50,
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   loadingText: {
+    textAlign: "center",
+    marginTop: 50,
     fontSize: 16,
-    color: '#6c757d',
-    textAlign: 'center',
-    marginTop: 15,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: "#666",
   },
 });
