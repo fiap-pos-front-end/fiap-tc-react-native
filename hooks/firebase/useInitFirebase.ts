@@ -8,6 +8,5 @@ export function useInitFirebase() {
     messagingSenderId: process.env.messagingSenderId,
     appId: process.env.appId,
   };
-  const app = initializeApp(firebaseConfig);
-  console.log("🚀 ~ RootLayout ~ app:", app);
+  initializeApp(firebaseConfig);
 }

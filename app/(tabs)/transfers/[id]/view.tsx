@@ -98,7 +98,6 @@ export default function ViewTransferScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <ThemedView style={styles.content}>
-          {/* Header */}
           <ThemedView style={styles.header}>
             <ThemedView
               style={[
@@ -135,7 +134,6 @@ export default function ViewTransferScreen() {
             </ThemedText>
           </ThemedView>
 
-          {/* Info */}
           <ThemedView style={styles.infoSection}>
             <ThemedText style={styles.sectionTitle}>Informações</ThemedText>
 
@@ -188,7 +186,6 @@ export default function ViewTransferScreen() {
 
           <AttachmentViewer transferId={transfer.id} editable={false} />
 
-          {/* Actions */}
           <ThemedView style={styles.actionsSection}>
             <TouchableOpacity
               style={styles.editButton}

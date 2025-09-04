@@ -87,7 +87,6 @@ export default function AddTransferScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <ThemedView style={styles.content}>
-          {/* Formulário básico */}
           <ThemedView style={styles.form}>
             <ThemedView style={styles.inputGroup}>
               <ThemedText style={styles.label}>Descrição</ThemedText>
@@ -203,7 +202,6 @@ export default function AddTransferScreen() {
                 disabled={isLoading}
               />
 
-              {/* Lista de anexos selecionados */}
               {selectedImages.length > 0 && (
                 <ThemedView style={styles.imagesPreview}>
                   <ThemedText style={styles.previewTitle}>
@@ -236,7 +234,6 @@ export default function AddTransferScreen() {
               )}
             </ThemedView>
 
-            {/* Progress do upload */}
             {uploading && (
               <ThemedView style={styles.progressContainer}>
                 <ThemedText style={styles.progressText}>

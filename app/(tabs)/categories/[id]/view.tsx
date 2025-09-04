@@ -77,7 +77,6 @@ export default function ViewCategoryScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <ThemedView style={styles.content}>
-          {/* Header */}
           <ThemedView style={styles.header}>
             <ThemedView style={styles.iconContainer}>
               <ThemedText style={styles.icon}>{category.icon}</ThemedText>
@@ -85,7 +84,6 @@ export default function ViewCategoryScreen() {
             <ThemedText style={styles.title}>{category.name}</ThemedText>
           </ThemedView>
 
-          {/* Info */}
           <ThemedView style={styles.infoSection}>
             <ThemedText style={styles.sectionTitle}>Informações</ThemedText>
 
@@ -111,7 +109,6 @@ export default function ViewCategoryScreen() {
             </ThemedView>
           </ThemedView>
 
-          {/* Actions */}
           <ThemedView style={styles.actionsSection}>
             <TouchableOpacity
               style={styles.editButton}
