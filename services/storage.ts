@@ -1,5 +1,17 @@
-import { StorageMetadata, UploadResult } from "@/types/firebase";
 import storage, { FirebaseStorageTypes } from "@react-native-firebase/storage";
+
+export interface UploadResult {
+  downloadURL: string;
+  fileName: string;
+  size: number;
+  fullPath: string;
+}
+
+export interface UploadProgress {
+  bytesTransferred: number;
+  totalBytes: number;
+  progress: number;
+}
 
 export class StorageService {
   private storage = storage();
@@ -7,7 +19,7 @@ export class StorageService {
   async uploadFile(
     localUri: string,
     remotePath: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadResult> {
     try {
       const reference = this.storage.ref(remotePath);
@@ -18,7 +30,11 @@ export class StorageService {
         task.on("state_changed", (snapshot) => {
           const progress =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          onProgress(progress);
+          onProgress({
+            bytesTransferred: snapshot.bytesTransferred,
+            totalBytes: snapshot.totalBytes,
+            progress,
+          });
         });
       }
 
@@ -31,6 +47,7 @@ export class StorageService {
         downloadURL,
         fileName: metadata.name,
         size: metadata.size,
+        fullPath: metadata.fullPath,
       };
     } catch (error) {
       console.error("Upload error:", error);
@@ -38,37 +55,38 @@ export class StorageService {
     }
   }
 
-  async uploadString(
-    content: string,
-    remotePath: string,
-    format: "raw" | "base64" | "base64url" | "data_url" = "raw"
+  async uploadImage(
+    imageUri: string,
+    folder: string = "images",
+    fileName?: string
   ): Promise<UploadResult> {
     try {
-      const reference = this.storage.ref(remotePath);
+      const timestamp = Date.now();
+      const extension = imageUri.split(".").pop() || "jpg";
+      const finalFileName = fileName || `image_${timestamp}.${extension}`;
+      const remotePath = `${folder}/${finalFileName}`;
 
-      await reference.putString(content, format);
-
-      const downloadURL = await reference.getDownloadURL();
-      const metadata = await reference.getMetadata();
-
-      return {
-        downloadURL,
-        fileName: metadata.name,
-        size: metadata.size,
-      };
+      return await this.uploadFile(imageUri, remotePath);
     } catch (error) {
-      console.error("Upload string error:", error);
+      console.error("Upload image error:", error);
       throw error;
     }
   }
 
-  async downloadFile(remotePath: string, localPath: string): Promise<string> {
+  async uploadDocument(
+    documentUri: string,
+    folder: string = "documents",
+    fileName?: string
+  ): Promise<UploadResult> {
     try {
-      const reference = this.storage.ref(remotePath);
-      await reference.writeToFile(localPath);
-      return localPath;
+      const timestamp = Date.now();
+      const extension = documentUri.split(".").pop() || "pdf";
+      const finalFileName = fileName || `document_${timestamp}.${extension}`;
+      const remotePath = `${folder}/${finalFileName}`;
+
+      return await this.uploadFile(documentUri, remotePath);
     } catch (error) {
-      console.error("Download error:", error);
+      console.error("Upload document error:", error);
       throw error;
     }
   }
@@ -93,48 +111,86 @@ export class StorageService {
     }
   }
 
-  async getMetadata(remotePath: string): Promise<StorageMetadata> {
+  async getFileMetadata(
+    remotePath: string
+  ): Promise<FirebaseStorageTypes.FullMetadata> {
     try {
       const reference = this.storage.ref(remotePath);
-      const metadata = await reference.getMetadata();
-
-      return {
-        name: metadata.name,
-        size: metadata.size,
-        contentType: metadata.contentType || "",
-        timeCreated: metadata.timeCreated,
-        updated: metadata.updated,
-      };
+      return await reference.getMetadata();
     } catch (error) {
       console.error("Get metadata error:", error);
       throw error;
     }
   }
 
-  async listFiles(path: string): Promise<FirebaseStorageTypes.ListResult> {
+  async listFiles(path: string): Promise<{
+    items: FirebaseStorageTypes.Reference[];
+    prefixes: FirebaseStorageTypes.Reference[];
+  }> {
     try {
       const reference = this.storage.ref(path);
-      return await reference.list();
+      const result = await reference.list();
+      return {
+        items: result.items,
+        prefixes: result.prefixes,
+      };
     } catch (error) {
       console.error("List files error:", error);
       throw error;
     }
   }
 
-  async uploadImage(
-    imageUri: string,
-    folder: string = "images",
-    fileName?: string
-  ): Promise<UploadResult> {
+  async downloadFile(remotePath: string, localPath: string): Promise<string> {
     try {
-      const timestamp = Date.now();
-      const finalFileName = fileName || `image_${timestamp}.jpg`;
-      const remotePath = `${folder}/${finalFileName}`;
-
-      return await this.uploadFile(imageUri, remotePath);
+      const reference = this.storage.ref(remotePath);
+      await reference.writeToFile(localPath);
+      return localPath;
     } catch (error) {
-      console.error("Upload image error:", error);
+      console.error("Download error:", error);
       throw error;
     }
   }
+
+  async fileExists(remotePath: string): Promise<boolean> {
+    try {
+      const reference = this.storage.ref(remotePath);
+      await reference.getMetadata();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  generateUniqueFileName(prefix: string, extension: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${prefix}_${timestamp}_${random}.${extension}`;
+  }
+
+  getFileType(fileName: string): "image" | "document" | "other" {
+    const extension = fileName.split(".").pop()?.toLowerCase();
+
+    const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp"];
+    const documentExtensions = ["pdf", "doc", "docx", "txt", "rtf"];
+
+    if (imageExtensions.includes(extension || "")) {
+      return "image";
+    } else if (documentExtensions.includes(extension || "")) {
+      return "document";
+    }
+
+    return "other";
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return "0 Bytes";
+
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
 }
+
+export const storageService = new StorageService();

@@ -1,95 +1,60 @@
-import { Category } from "@/types";
-import { useCallback, useEffect, useState } from "react";
-import { firestoreService } from "../services/firestore";
+import { Category } from "../types";
+import { useFirebaseCRUD } from "./firebase/useFirebaseCRUD";
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: categories,
+    loading,
+    error,
+    create,
+    update,
+    remove,
+    findById: getCategoryById,
+    clear,
+    refresh,
+  } = useFirebaseCRUD<Category>("categories", "name");
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
+  const addCategory = async (categoryData: Omit<Category, "id">) => {
+    return await create(categoryData);
+  };
 
-    const unsubscribe = firestoreService.onCollectionSnapshot<Category>(
-      "categories",
-      (data) => {
-        setCategories(data);
-        setLoading(false);
-      },
-      "created"
+  const updateCategory = async (category: Category) => {
+    return await update(category.id, {
+      name: category.name,
+      icon: category.icon,
+    });
+  };
+
+  const deleteCategory = async (categoryId: string) => {
+    return await remove(categoryId);
+  };
+
+  const searchCategories = (searchTerm: string) => {
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+  };
 
-    return unsubscribe;
-  }, []);
+  const seedCategories = async (): Promise<void> => {
+    const defaultCategories: Omit<Category, "id">[] = [
+      { name: "Alimentação", icon: "🍽️" },
+      { name: "Transporte", icon: "🚗" },
+      { name: "Saúde", icon: "🏥" },
+      { name: "Educação", icon: "📚" },
+      { name: "Lazer", icon: "🎮" },
+      { name: "Roupas", icon: "👕" },
+      { name: "Casa", icon: "🏠" },
+      { name: "Salário", icon: "💰" },
+      { name: "Investimentos", icon: "📈" },
+      { name: "Outros", icon: "📋" },
+    ];
 
-  const addCategory = useCallback(
-    async (categoryData: Omit<Category, "id" | "created">) => {
-      try {
-        setError(null);
-
-        const id = await firestoreService.addDocument<Category>("categories", {
-          ...categoryData,
-          created: new Date(),
-        });
-
-        return id;
-      } catch (err) {
-        const errorMessage = (err as Error).message;
-        setError(errorMessage);
-        throw new Error(errorMessage);
+    if (categories.length === 0) {
+      for (const category of defaultCategories) {
+        await create(category);
       }
-    },
-    []
-  );
-
-  const updateCategory = useCallback(async (category: Category) => {
-    try {
-      setError(null);
-
-      await firestoreService.updateDocument<Category>(
-        "categories",
-        category.id,
-        {
-          name: category.name,
-          icon: category.icon,
-          updated: new Date(),
-        }
-      );
-    } catch (err) {
-      const errorMessage = (err as Error).message;
-      setError(errorMessage);
-      throw new Error(errorMessage);
     }
-  }, []);
-
-  const deleteCategory = useCallback(async (categoryId: string) => {
-    try {
-      setError(null);
-
-      await firestoreService.deleteDocument("categories", categoryId);
-    } catch (err) {
-      const errorMessage = (err as Error).message;
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, []);
-
-  const getCategoryById = useCallback(
-    (id: string): Category | undefined => {
-      return categories.find((category) => category.id === id);
-    },
-    [categories]
-  );
-
-  const searchCategories = useCallback(
-    (searchTerm: string) => {
-      return categories.filter((category) =>
-        category.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    },
-    [categories]
-  );
+  };
 
   return {
     categories,
@@ -100,5 +65,8 @@ export function useCategories() {
     deleteCategory,
     getCategoryById,
     searchCategories,
+    seedCategories,
+    clearAllCategories: clear,
+    refreshCategories: refresh,
   };
 }

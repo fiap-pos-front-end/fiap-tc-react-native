@@ -1,32 +1,34 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import "react-native-reanimated";
 
-import { configurePortugueseBrazilianLocale } from '@/constants/LocaleConfig';
-import { AppContextProvider } from '@/contexts/AppContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { configurePortugueseBrazilianLocale } from "@/constants/LocaleConfig";
+import { AppContextProvider } from "@/contexts/AppContext";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  // Configure Portuguese-Brazilian locale for the entire app
   useEffect(() => {
     configurePortugueseBrazilianLocale();
   }, []);
 
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AppContextProvider>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

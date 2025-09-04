@@ -1,192 +1,201 @@
-import { useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from "expo-router";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useCategories } from '@/contexts/CategoryContext';
-import { useDashboard } from '@/contexts/DashboardContext';
-import { useTransfers } from '@/contexts/TransferContext';
-import { forceClearAllData } from '@/utils/clearStorage';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useDashboard } from "@/contexts/DashboardContext";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { dashboardData, loading, error } = useDashboard();
-  const { categories, seedCategories } = useCategories();
-  const { transfers, seedTransfers } = useTransfers();
-
-  // Check if we have any data
-  const hasData = categories.length > 0 || transfers.length > 0;
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <ActivityIndicator size='large' color='#007bff' />
-      </ThemedView>
+      <SafeAreaView style={styles.container}>
+        <ThemedView style={styles.centeredContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
+          <ThemedText style={styles.loadingText}>
+            Carregando dashboard...
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
-      </ThemedView>
+      <SafeAreaView style={styles.container}>
+        <ThemedView style={styles.centeredContainer}>
+          <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
-  const handleClearStorage = async () => {
-    Alert.alert('Limpar Todos os Dados', 'Isso removerá todas as categorias e transferências. Tem certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Limpar Tudo',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await forceClearAllData();
-            Alert.alert('Sucesso', 'Todos os dados foram limpos. Por favor, reinicie o app para ver as mudanças.');
-          } catch (error) {
-            Alert.alert('Erro', 'Falha ao limpar dados do storage');
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleSeedData = async () => {
-    Alert.alert('Criar Dados Iniciais', 'Isso criará categorias e transferências de exemplo. Tem certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Criar Dados',
-        style: 'default',
-        onPress: async () => {
-          try {
-            await seedCategories();
-            await seedTransfers();
-
-            Alert.alert('Sucesso', 'Dados iniciais criados com sucesso!');
-          } catch (error) {
-            Alert.alert('Erro', 'Falha ao criar dados iniciais');
-          }
-        },
-      },
-    ]);
-  };
-
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText type='title'>Dashboard</ThemedText>
-        <ThemedText type='subtitle'>Visão geral das suas finanças</ThemedText>
-      </ThemedView>
-
+    <SafeAreaView style={styles.container}>
       <ThemedView style={styles.content}>
-        <ThemedView style={styles.card}>
-          <ThemedText type='defaultSemiBold'>Saldo Atual</ThemedText>
-          <ThemedText type='title' style={styles.balance}>
-            {formatCurrency(dashboardData.currentBalance)}
+        <ThemedView style={styles.header}>
+          <ThemedText style={styles.title}>Dashboard</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Visão geral das suas finanças
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={styles.card}>
-          <ThemedText type='defaultSemiBold'>Receitas do Mês</ThemedText>
-          <ThemedText type='subtitle' style={styles.income}>
-            {formatCurrency(dashboardData.monthlyIncome)}
-          </ThemedText>
+        <ThemedView style={styles.cardsContainer}>
+          <ThemedView style={styles.card}>
+            <ThemedText style={styles.cardLabel}>Saldo Atual</ThemedText>
+            <ThemedText style={[styles.balance, styles.cardValue]}>
+              {formatCurrency(dashboardData.currentBalance)}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.card}>
+            <ThemedText style={styles.cardLabel}>Receitas do Mês</ThemedText>
+            <ThemedText style={[styles.income, styles.cardValue]}>
+              {formatCurrency(dashboardData.monthlyIncome)}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.card}>
+            <ThemedText style={styles.cardLabel}>Despesas do Mês</ThemedText>
+            <ThemedText style={[styles.expense, styles.cardValue]}>
+              {formatCurrency(dashboardData.monthlyExpense)}
+            </ThemedText>
+          </ThemedView>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push("/dashboard/details")}
+          >
+            <ThemedText style={styles.buttonText}>Ver Detalhes</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
-
-        <ThemedView style={styles.card}>
-          <ThemedText type='defaultSemiBold'>Despesas do Mês</ThemedText>
-          <ThemedText type='subtitle' style={styles.expense}>
-            {formatCurrency(dashboardData.monthlyExpense)}
-          </ThemedText>
-        </ThemedView>
-
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/dashboard/details')}>
-          <ThemedText style={styles.buttonText}>Ver Detalhes</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={hasData ? styles.clearButton : styles.seedButton}
-          onPress={hasData ? handleClearStorage : handleSeedData}
-        >
-          <ThemedText style={hasData ? styles.clearButtonText : styles.seedButtonText}>
-            {hasData ? 'Limpar dados' : 'Criar dados iniciais'}
-          </ThemedText>
-        </TouchableOpacity>
       </ThemedView>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
+  },
+  centeredContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  content: {
+    flex: 1,
     padding: 20,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
     marginTop: 20,
   },
-  content: {
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  cardsContainer: {
     flex: 1,
     gap: 20,
   },
   card: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
-    alignItems: 'center',
-    gap: 8,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+  },
+  cardValue: {
+    fontSize: 28,
+    fontWeight: "bold",
   },
   balance: {
-    fontSize: 32,
-    color: '#28a745',
+    color: "#28a745",
   },
   income: {
-    fontSize: 24,
-    color: '#28a745',
+    color: "#28a745",
   },
   expense: {
-    fontSize: 24,
-    color: '#dc3545',
+    color: "#dc3545",
   },
   button: {
-    backgroundColor: '#007bff',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: "#007bff",
+    padding: 18,
+    borderRadius: 12,
+    alignItems: "center",
     marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
-    color: 'white',
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  loadingText: {
+    textAlign: "center",
+    marginTop: 16,
     fontSize: 16,
-    fontWeight: '600',
+    color: "#666",
   },
   errorText: {
-    color: '#dc3545',
+    color: "#dc3545",
     fontSize: 16,
-    textAlign: 'center',
-    marginTop: 20,
+    textAlign: "center",
   },
   clearButton: {
-    alignItems: 'center',
+    alignItems: "center",
+    padding: 12,
   },
   clearButtonText: {
-    color: '#dc3545',
-    fontSize: 14,
+    color: "#dc3545",
+    fontSize: 16,
+    fontWeight: "500",
   },
   seedButton: {
-    alignItems: 'center',
+    alignItems: "center",
+    padding: 12,
   },
   seedButtonText: {
-    color: '#007bff',
-    fontSize: 14,
+    color: "#007bff",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });

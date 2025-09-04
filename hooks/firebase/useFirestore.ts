@@ -1,5 +1,5 @@
+import { FirestoreService } from "@/services/firestore";
 import { useCallback, useEffect, useState } from "react";
-import { FirestoreService } from "../services/firestore";
 
 interface UseFirestoreState<T> {
   data: T | null;

@@ -1,24 +1,24 @@
-export enum TransactionType {
-  INCOME = "income",
-  EXPENSE = "expense",
+export interface BaseEntity {
+  id: string;
 }
 
-export interface Category {
-  id: string;
+export interface Category extends BaseEntity {
   name: string;
   icon: string;
-  created: Date;
-  updated?: Date;
 }
 
-export interface Transfer {
-  id: string;
+export interface Transfer extends BaseEntity {
   description: string;
   amount: number;
   type: TransactionType;
   categoryId: string;
   date: string;
   notes?: string;
+}
+
+export enum TransactionType {
+  INCOME = "income",
+  EXPENSE = "expense",
 }
 
 export interface DashboardData {

@@ -1,30 +1,25 @@
-import { Category } from "@/types";
 import React, { createContext, ReactNode, useContext } from "react";
-import { useCategories as useFirebaseCategories } from "../hooks/useCategories";
+import { useCategories as useCategoriesHook } from "../hooks/useCategories";
+import { Category } from "../types";
 
 interface CategoryContextType {
   categories: Category[];
   loading: boolean;
   error: string | null;
-  addCategory: (
-    categoryData: Omit<Category, "id" | "created">
-  ) => Promise<string>;
+  addCategory: (categoryData: Omit<Category, "id">) => Promise<string>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   getCategoryById: (id: string) => Category | undefined;
   searchCategories: (searchTerm: string) => Category[];
+  seedCategories: () => Promise<void>;
 }
 
 const CategoryContext = createContext<CategoryContextType | undefined>(
   undefined
 );
 
-interface CategoryProviderProps {
-  children: ReactNode;
-}
-
-export function CategoryProvider({ children }: CategoryProviderProps) {
-  const categoryData = useFirebaseCategories();
+export function CategoryProvider({ children }: { children: ReactNode }) {
+  const categoryData = useCategoriesHook();
 
   return (
     <CategoryContext.Provider value={categoryData}>
