@@ -52,12 +52,14 @@ export default function ProfileScreen() {
             </ThemedText>
 
             <ThemedView style={styles.infoCard}>
-              <ThemedView style={styles.infoRow}>
-                <ThemedText style={styles.infoLabel}>Nome:</ThemedText>
-                <ThemedText style={styles.infoValue}>
-                  {user?.displayName || "Não informado"}
-                </ThemedText>
-              </ThemedView>
+              {user?.displayName && (
+                <ThemedView style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Nome:</ThemedText>
+                  <ThemedText style={styles.infoValue}>
+                    {user?.displayName || "Não informado"}
+                  </ThemedText>
+                </ThemedView>
+              )}
 
               <ThemedView style={styles.infoRow}>
                 <ThemedText style={styles.infoLabel}>Email:</ThemedText>
