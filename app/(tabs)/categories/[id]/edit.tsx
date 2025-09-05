@@ -111,7 +111,7 @@ export default function EditCategoryScreen() {
             </ThemedView>
 
             <ThemedView style={styles.preview}>
-              <ThemedText style={styles.label}>Preview</ThemedText>
+              <ThemedText style={styles.label}>Prévia</ThemedText>
               <ThemedView style={styles.previewItem}>
                 <ThemedText style={styles.previewIcon}>
                   {selectedIcon}

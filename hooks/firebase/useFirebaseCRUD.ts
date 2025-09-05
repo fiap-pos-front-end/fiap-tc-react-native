@@ -6,7 +6,7 @@ interface FirebaseCRUDResult<T extends BaseEntity> {
   data: T[];
   loading: boolean;
   error: string | null;
-  create: (item: Omit<T, "id">) => Promise<string>;
+  create: (item: Omit<T, "id" | "userId">) => Promise<string>;
   update: (id: string, item: Partial<T>) => Promise<void>;
   remove: (id: string) => Promise<void>;
   findById: (id: string) => T | undefined;
@@ -39,7 +39,7 @@ export function useFirebaseCRUD<T extends BaseEntity>(
   }, [collectionName, orderBy]);
 
   const create = useCallback(
-    async (item: Omit<T, "id">): Promise<string> => {
+    async (item: Omit<T, "id" | "userId">): Promise<string> => {
       try {
         setError(null);
         const id = await firestoreService.addDocument<T>(collectionName, item);

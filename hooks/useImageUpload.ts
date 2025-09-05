@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useStorage } from "./useStorage";
+import { useStorage } from "./firebase/useStorage";
 
 export function useImageUpload() {
   const { uploadImage, uploading, progress, error } = useStorage();

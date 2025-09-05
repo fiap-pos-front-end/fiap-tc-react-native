@@ -1,5 +1,6 @@
 import { FirestoreService } from "@/services/firestore";
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "./useAuth";
 
 interface UseFirestoreState<T> {
   data: T | null;
@@ -16,6 +17,7 @@ interface UseFirestoreCollectionState<T> {
 export const firestoreService = new FirestoreService();
 
 export function useFirestoreDocument<T>(collection: string, id: string | null) {
+  const { user } = useAuth();
   const [state, setState] = useState<UseFirestoreState<T>>({
     data: null,
     loading: true,
@@ -28,18 +30,32 @@ export function useFirestoreDocument<T>(collection: string, id: string | null) {
       return;
     }
 
+    if (!user?.uid) {
+      setState({ data: null, loading: false, error: "User not authenticated" });
+      return;
+    }
+
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const unsubscribe = firestoreService.onDocumentSnapshot<T>(
-      collection,
-      id,
-      (data) => {
-        setState({ data, loading: false, error: null });
-      }
-    );
+    try {
+      const unsubscribe = firestoreService.onDocumentSnapshot<T>(
+        collection,
+        id,
+        (data) => {
+          setState({ data, loading: false, error: null });
+        }
+      );
 
-    return unsubscribe;
-  }, [collection, id]);
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up document snapshot:", error);
+      setState({
+        data: null,
+        loading: false,
+        error: (error as Error).message,
+      });
+    }
+  }, [collection, id, user?.uid]);
 
   const updateDocument = useCallback(
     async (data: Partial<T>) => {
@@ -48,7 +64,9 @@ export function useFirestoreDocument<T>(collection: string, id: string | null) {
       try {
         await firestoreService.updateDocument(collection, id, data);
       } catch (error) {
+        console.error("Error updating document:", error);
         setState((prev) => ({ ...prev, error: (error as Error).message }));
+        throw error;
       }
     },
     [collection, id]
@@ -60,7 +78,9 @@ export function useFirestoreDocument<T>(collection: string, id: string | null) {
     try {
       await firestoreService.deleteDocument(collection, id);
     } catch (error) {
+      console.error("Error deleting document:", error);
       setState((prev) => ({ ...prev, error: (error as Error).message }));
+      throw error;
     }
   }, [collection, id]);
 
@@ -75,6 +95,7 @@ export function useFirestoreCollection<T>(
   collection: string,
   orderBy?: string
 ) {
+  const { user } = useAuth();
   const [state, setState] = useState<UseFirestoreCollectionState<T>>({
     data: [],
     loading: true,
@@ -82,25 +103,40 @@ export function useFirestoreCollection<T>(
   });
 
   useEffect(() => {
+    if (!user?.uid) {
+      setState({ data: [], loading: false, error: null });
+      return;
+    }
+
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const unsubscribe = firestoreService.onCollectionSnapshot<T>(
-      collection,
-      (data) => {
-        setState({ data, loading: false, error: null });
-      },
-      orderBy
-    );
+    try {
+      const unsubscribe = firestoreService.onCollectionSnapshot<T>(
+        collection,
+        (data) => {
+          setState({ data, loading: false, error: null });
+        },
+        orderBy
+      );
 
-    return unsubscribe;
-  }, [collection, orderBy]);
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up collection snapshot:", error);
+      setState({
+        data: [],
+        loading: false,
+        error: (error as Error).message,
+      });
+    }
+  }, [collection, orderBy, user?.uid]);
 
   const addDocument = useCallback(
-    async (data: Omit<T, "id">) => {
+    async (data: Omit<T, "id" | "userId">) => {
       try {
         const id = await firestoreService.addDocument(collection, data);
         return id;
       } catch (error) {
+        console.error("Error adding document:", error);
         setState((prev) => ({ ...prev, error: (error as Error).message }));
         throw error;
       }
@@ -118,9 +154,10 @@ export function useFirestoreCollection<T>(
           operator,
           value
         );
-        setState({ data, loading: false, error: null });
+        setState((prev) => ({ ...prev, data, loading: false, error: null }));
         return data;
       } catch (error) {
+        console.error("Error querying documents:", error);
         setState((prev) => ({
           ...prev,
           loading: false,
@@ -144,13 +181,14 @@ export function useFirestoreCRUD<T>() {
   const [error, setError] = useState<string | null>(null);
 
   const create = useCallback(
-    async (collection: string, data: Omit<T, "id">) => {
+    async (collection: string, data: Omit<T, "id" | "userId">) => {
       try {
         setLoading(true);
         setError(null);
         const id = await firestoreService.addDocument(collection, data);
         return id;
       } catch (err) {
+        console.error("CRUD create error:", err);
         const errorMessage = (err as Error).message;
         setError(errorMessage);
         throw err;
@@ -168,6 +206,7 @@ export function useFirestoreCRUD<T>() {
       const data = await firestoreService.getDocument<T>(collection, id);
       return data;
     } catch (err) {
+      console.error("CRUD read error:", err);
       const errorMessage = (err as Error).message;
       setError(errorMessage);
       throw err;
@@ -183,6 +222,7 @@ export function useFirestoreCRUD<T>() {
         setError(null);
         await firestoreService.updateDocument(collection, id, data);
       } catch (err) {
+        console.error("CRUD update error:", err);
         const errorMessage = (err as Error).message;
         setError(errorMessage);
         throw err;
@@ -199,6 +239,7 @@ export function useFirestoreCRUD<T>() {
       setError(null);
       await firestoreService.deleteDocument(collection, id);
     } catch (err) {
+      console.error("CRUD remove error:", err);
       const errorMessage = (err as Error).message;
       setError(errorMessage);
       throw err;
@@ -219,6 +260,31 @@ export function useFirestoreCRUD<T>() {
         );
         return data;
       } catch (err) {
+        console.error("CRUD getCollection error:", err);
+        const errorMessage = (err as Error).message;
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const queryCollection = useCallback(
+    async (collection: string, field: string, operator: any, value: any) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await firestoreService.queryCollection<T>(
+          collection,
+          field,
+          operator,
+          value
+        );
+        return data;
+      } catch (err) {
+        console.error("CRUD queryCollection error:", err);
         const errorMessage = (err as Error).message;
         setError(errorMessage);
         throw err;
@@ -237,5 +303,7 @@ export function useFirestoreCRUD<T>() {
     update,
     remove,
     getCollection,
+    queryCollection,
+    isAuthenticated: firestoreService.isAuthenticated(),
   };
 }

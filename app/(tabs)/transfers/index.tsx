@@ -4,7 +4,7 @@ import { useCategories } from "@/contexts/CategoryContext";
 import { useTransfers } from "@/contexts/TransferContext";
 import { TransactionType, Transfer } from "@/types";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,29 @@ export default function TransfersListScreen() {
   const { transfers, loading, error, deleteTransfer, refreshTransfers } =
     useTransfers();
   const { categories } = useCategories();
+
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, [transfers.length, loading, error]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+
+    try {
+      if (refreshTransfers) {
+        await refreshTransfers();
+      }
+
+      setRefreshKey((prev) => prev + 1);
+    } catch (error) {
+      console.error("Erro ao atualizar transfers:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshTransfers]);
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find((cat) => cat.id === categoryId);
@@ -44,6 +67,8 @@ export default function TransfersListScreen() {
             try {
               await deleteTransfer(transfer.id);
               Alert.alert("Sucesso", "Transferência excluída!");
+
+              setRefreshKey((prev) => prev + 1);
             } catch {
               Alert.alert("Erro", "Falha ao excluir transferência");
             }
@@ -64,61 +89,64 @@ export default function TransfersListScreen() {
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
-  const renderTransfer = ({ item }: { item: Transfer }) => (
-    <TouchableOpacity
-      style={styles.transferItem}
-      onPress={() => router.push(`/transfers/${item.id}/view`)}
-    >
-      <ThemedView style={styles.transferContent}>
-        <ThemedText style={styles.transferIcon}>
-          {getCategoryIcon(item.categoryId)}
-        </ThemedText>
+  const renderTransfer = useCallback(
+    ({ item }: { item: Transfer }) => (
+      <TouchableOpacity
+        style={styles.transferItem}
+        onPress={() => router.push(`/transfers/${item.id}/view`)}
+      >
+        <ThemedView style={styles.transferContent}>
+          <ThemedText style={styles.transferIcon}>
+            {getCategoryIcon(item.categoryId)}
+          </ThemedText>
 
-        <ThemedView style={styles.transferInfo}>
-          <ThemedText style={styles.transferDescription}>
-            {item.description}
-          </ThemedText>
-          <ThemedText style={styles.transferCategory}>
-            {getCategoryName(item.categoryId)}
-          </ThemedText>
-          <ThemedText style={styles.transferDate}>
-            {formatDate(item.date)}
-          </ThemedText>
-          {item.notes && (
-            <ThemedText style={styles.transferNotes}>{item.notes}</ThemedText>
-          )}
-        </ThemedView>
+          <ThemedView style={styles.transferInfo}>
+            <ThemedText style={styles.transferDescription}>
+              {item.description}
+            </ThemedText>
+            <ThemedText style={styles.transferCategory}>
+              {getCategoryName(item.categoryId)}
+            </ThemedText>
+            <ThemedText style={styles.transferDate}>
+              {formatDate(item.date)}
+            </ThemedText>
+            {item.notes && (
+              <ThemedText style={styles.transferNotes}>{item.notes}</ThemedText>
+            )}
+          </ThemedView>
 
-        <ThemedView style={styles.transferAmount}>
-          <ThemedText
-            style={[
-              styles.amount,
-              item.type === TransactionType.INCOME
-                ? styles.incomeAmount
-                : styles.expenseAmount,
-            ]}
-          >
-            {item.type === TransactionType.INCOME ? "+" : "-"}
-            {formatCurrency(item.amount)}
-          </ThemedText>
-        </ThemedView>
+          <ThemedView style={styles.transferAmount}>
+            <ThemedText
+              style={[
+                styles.amount,
+                item.type === TransactionType.INCOME
+                  ? styles.incomeAmount
+                  : styles.expenseAmount,
+              ]}
+            >
+              {item.type === TransactionType.INCOME ? "+" : "-"}
+              {formatCurrency(item.amount)}
+            </ThemedText>
+          </ThemedView>
 
-        <ThemedView style={styles.transferActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleDeleteTransfer(item);
-            }}
-          >
-            <ThemedText style={styles.actionText}>🗑️</ThemedText>
-          </TouchableOpacity>
+          <ThemedView style={styles.transferActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDeleteTransfer(item);
+              }}
+            >
+              <ThemedText style={styles.actionText}>🗑️</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    ),
+    [router, categories, handleDeleteTransfer, getCategoryIcon, getCategoryName]
   );
 
-  if (loading) {
+  if (loading && !isRefreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <ThemedView style={styles.centeredContainer}>
@@ -134,12 +162,9 @@ export default function TransfersListScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedView style={styles.container}>
+        <ThemedView style={styles.centeredContainer}>
           <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={refreshTransfers}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
             <ThemedText style={styles.retryButtonText}>
               Tentar Novamente
             </ThemedText>
@@ -151,7 +176,7 @@ export default function TransfersListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.container}>
+      <ThemedView style={styles.container} key={refreshKey}>
         {transfers.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <ThemedText style={styles.emptyIcon}>📊</ThemedText>
@@ -161,21 +186,38 @@ export default function TransfersListScreen() {
             <ThemedText style={styles.emptySubtitle}>
               Comece adicionando sua primeira transação
             </ThemedText>
+            <ThemedText style={styles.pullToRefreshHint}>
+              Puxe para baixo para atualizar
+            </ThemedText>
           </ThemedView>
         ) : (
           <FlatList
             data={transfers}
             renderItem={renderTransfer}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => `${item.id}-${refreshKey}`}
             style={styles.list}
+            contentContainerStyle={styles.listContent}
+            extraData={refreshKey}
+            showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={loading}
-                onRefresh={refreshTransfers}
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
                 colors={["#007bff"]}
+                tintColor="#007bff"
+                title="Atualizando transferências..."
+                titleColor="#666"
               />
             }
-            contentContainerStyle={styles.listContent}
+            removeClippedSubviews={false}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            getItemLayout={(data, index) => ({
+              length: 120,
+              offset: 120 * index,
+              index,
+            })}
           />
         )}
       </ThemedView>
@@ -293,10 +335,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#666",
     lineHeight: 22,
+    marginBottom: 10,
+  },
+  pullToRefreshHint: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#999",
+    fontStyle: "italic",
   },
   loadingText: {
     textAlign: "center",
-    marginTop: 50,
+    marginTop: 16,
     fontSize: 16,
     color: "#666",
   },
@@ -304,13 +353,12 @@ const styles = StyleSheet.create({
     color: "#dc3545",
     fontSize: 16,
     textAlign: "center",
-    marginTop: 20,
+    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: "#007bff",
     padding: 12,
     borderRadius: 8,
-    marginTop: 15,
     alignSelf: "center",
   },
   retryButtonText: {

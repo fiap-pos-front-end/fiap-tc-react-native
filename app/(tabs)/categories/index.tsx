@@ -3,11 +3,12 @@ import { ThemedView } from "@/components/ThemedView";
 import { useCategories } from "@/contexts/CategoryContext";
 import { Category } from "@/types";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
@@ -16,6 +17,27 @@ import {
 export default function CategoriesListScreen() {
   const router = useRouter();
   const { categories, loading, error, deleteCategory } = useCategories();
+
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, [categories.length, loading, error]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+
+    try {
+      setRefreshKey((prev) => prev + 1);
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error("Erro ao atualizar lista:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const handleDeleteCategory = (category: Category) => {
     Alert.alert(
@@ -30,6 +52,8 @@ export default function CategoriesListScreen() {
             try {
               await deleteCategory(category.id);
               Alert.alert("Sucesso", "Categoria excluída!");
+
+              setRefreshKey((prev) => prev + 1);
             } catch {
               Alert.alert("Erro", "Falha ao excluir categoria");
             }
@@ -39,30 +63,33 @@ export default function CategoriesListScreen() {
     );
   };
 
-  const renderCategory = ({ item }: { item: Category }) => (
-    <TouchableOpacity
-      style={styles.categoryItem}
-      onPress={() => router.push(`/categories/${item.id}/view`)}
-    >
-      <ThemedView style={styles.categoryInfo}>
-        <ThemedText style={styles.icon}>{item.icon}</ThemedText>
-        <ThemedView style={styles.categoryDetails}>
-          <ThemedText style={styles.categoryName}>{item.name}</ThemedText>
+  const renderCategory = useCallback(
+    ({ item }: { item: Category }) => (
+      <TouchableOpacity
+        style={styles.categoryItem}
+        onPress={() => router.push(`/categories/${item.id}/view`)}
+      >
+        <ThemedView style={styles.categoryInfo}>
+          <ThemedText style={styles.icon}>{item.icon}</ThemedText>
+          <ThemedView style={styles.categoryDetails}>
+            <ThemedText style={styles.categoryName}>{item.name}</ThemedText>
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
 
-      <ThemedView style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            handleDeleteCategory(item);
-          }}
-        >
-          <ThemedText style={styles.actionText}>🗑️</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-    </TouchableOpacity>
+        <ThemedView style={styles.actions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleDeleteCategory(item);
+            }}
+          >
+            <ThemedText style={styles.actionText}>🗑️</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      </TouchableOpacity>
+    ),
+    [router, handleDeleteCategory]
   );
 
   if (loading) {
@@ -90,7 +117,7 @@ export default function CategoriesListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.container}>
+      <ThemedView style={styles.container} key={refreshKey}>
         {categories.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <ThemedText style={styles.emptyIcon}>📋</ThemedText>
@@ -98,15 +125,33 @@ export default function CategoriesListScreen() {
             <ThemedText style={styles.emptySubtitle}>
               Toque no + para criar sua primeira categoria
             </ThemedText>
+            <ThemedText style={styles.pullToRefreshHint}>
+              Puxe para baixo para atualizar
+            </ThemedText>
           </ThemedView>
         ) : (
           <FlatList
             data={categories}
             renderItem={renderCategory}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => `${item.id}-${refreshKey}`}
             style={styles.list}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            extraData={refreshKey}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                colors={["#007bff"]}
+                tintColor="#007bff"
+                title="Atualizando..."
+                titleColor="#666"
+              />
+            }
+            removeClippedSubviews={false}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={10}
           />
         )}
       </ThemedView>
@@ -200,6 +245,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#666",
     lineHeight: 22,
+    marginBottom: 10,
+  },
+  pullToRefreshHint: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#999",
+    fontStyle: "italic",
   },
   loadingText: {
     textAlign: "center",

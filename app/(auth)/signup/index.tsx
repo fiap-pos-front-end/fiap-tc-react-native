@@ -54,16 +54,12 @@ export default function SignUpScreen() {
     const result = await signUp(email.trim(), password, name.trim());
 
     if (result.success) {
-      Alert.alert(
-        "Sucesso!",
-        "Conta criada com sucesso! Verifique seu email para confirmar sua conta.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/dashboard"),
-          },
-        ]
-      );
+      Alert.alert("Sucesso!", "Conta criada com sucesso! Acessando...", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/(tabs)/dashboard"),
+        },
+      ]);
     } else {
       Alert.alert("Erro no Cadastro", result.error || "Falha ao criar conta");
     }
