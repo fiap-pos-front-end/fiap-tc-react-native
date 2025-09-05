@@ -1,10 +1,10 @@
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
 
 import { AuthGuard } from "@/components/AuthGuard";
 import { HapticTab } from "@/components/HapticTab";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
@@ -35,7 +35,7 @@ export default function TabLayout() {
           options={{
             title: "Dashboard",
             tabBarIcon: ({ color }) => (
-              <IconSymbol size={28} name="chart.bar.fill" color={color} />
+              <MaterialIcons name="dashboard" size={28} color={color} />
             ),
           }}
         />
@@ -44,7 +44,7 @@ export default function TabLayout() {
           options={{
             title: "Categorias",
             tabBarIcon: ({ color }) => (
-              <IconSymbol size={28} name="folder.fill" color={color} />
+              <Ionicons name="folder" size={28} color={color} />
             ),
           }}
         />
@@ -53,11 +53,7 @@ export default function TabLayout() {
           options={{
             title: "Transferências",
             tabBarIcon: ({ color }) => (
-              <IconSymbol
-                size={28}
-                name="arrow.left.arrow.right"
-                color={color}
-              />
+              <Ionicons name="swap-horizontal" size={28} color={color} />
             ),
           }}
         />
@@ -66,7 +62,7 @@ export default function TabLayout() {
           options={{
             title: "Perfil",
             tabBarIcon: ({ color }) => (
-              <IconSymbol size={28} name="person.fill" color={color} />
+              <Ionicons name="person" size={28} color={color} />
             ),
           }}
         />
