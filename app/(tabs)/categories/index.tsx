@@ -13,31 +13,59 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { useAuth } from "../../../hooks/firebase/useAuth";
+import { useForceReset } from "../../../hooks/useForceReset";
 
 export default function CategoriesListScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { categories, loading, error, deleteCategory } = useCategories();
+  const { forceCompleteReset } = useForceReset();
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setRefreshKey((prev) => prev + 1);
-  }, [categories.length, loading, error]);
+  }, [categories?.length, loading, error]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
 
     try {
+      await forceCompleteReset();
+
       setRefreshKey((prev) => prev + 1);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     } catch (error) {
-      console.error("Erro ao atualizar lista:", error);
+      console.error("❌ Erro no refresh:", error);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [forceCompleteReset]);
+
+  const handleQuickReset = useCallback(async () => {
+    Alert.alert(
+      "Reset Forçado",
+      "Isso vai desconectar todos os listeners e forçar uma atualização. Continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Reset",
+          onPress: async () => {
+            const success = await forceCompleteReset();
+            if (success) {
+              setRefreshKey((prev) => prev + 1);
+              Alert.alert("Sucesso", "Reset forçado concluído!");
+            } else {
+              Alert.alert("Erro", "Falha no reset forçado");
+            }
+          },
+        },
+      ]
+    );
+  }, [forceCompleteReset]);
 
   const handleDeleteCategory = (category: Category) => {
     Alert.alert(
@@ -52,7 +80,6 @@ export default function CategoriesListScreen() {
             try {
               await deleteCategory(category.id);
               Alert.alert("Sucesso", "Categoria excluída!");
-
               setRefreshKey((prev) => prev + 1);
             } catch {
               Alert.alert("Erro", "Falha ao excluir categoria");
@@ -92,7 +119,7 @@ export default function CategoriesListScreen() {
     [router, handleDeleteCategory]
   );
 
-  if (loading) {
+  if (loading && !isRefreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <ThemedView style={styles.centeredContainer}>
@@ -110,6 +137,11 @@ export default function CategoriesListScreen() {
       <SafeAreaView style={styles.container}>
         <ThemedView style={styles.centeredContainer}>
           <ThemedText style={styles.errorText}>Erro: {error}</ThemedText>
+          <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+            <ThemedText style={styles.retryButtonText}>
+              Tentar Novamente
+            </ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       </SafeAreaView>
     );
@@ -118,7 +150,18 @@ export default function CategoriesListScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ThemedView style={styles.container} key={refreshKey}>
-        {categories.length === 0 ? (
+        {/* {__DEV__ && (
+          <TouchableOpacity
+            style={styles.debugButton}
+            onPress={handleQuickReset}
+          >
+            <ThemedText style={styles.debugButtonText}>
+              🔄 Reset Forçado (Debug)
+            </ThemedText>
+          </TouchableOpacity>
+        )} */}
+
+        {!categories || categories?.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <ThemedText style={styles.emptyIcon}>📋</ThemedText>
             <ThemedText style={styles.emptyTitle}>Nenhuma categoria</ThemedText>
@@ -128,6 +171,11 @@ export default function CategoriesListScreen() {
             <ThemedText style={styles.pullToRefreshHint}>
               Puxe para baixo para atualizar
             </ThemedText>
+            {user && (
+              <ThemedText style={styles.userInfo}>
+                Usuário: {user.email?.slice(0, 10)}...
+              </ThemedText>
+            )}
           </ThemedView>
         ) : (
           <FlatList
@@ -144,7 +192,7 @@ export default function CategoriesListScreen() {
                 onRefresh={onRefresh}
                 colors={["#007bff"]}
                 tintColor="#007bff"
-                title="Atualizando..."
+                title="Resetando listeners..."
                 titleColor="#666"
               />
             }
@@ -168,6 +216,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  debugButton: {
+    backgroundColor: "#ffc107",
+    margin: 10,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+    fontSize: 12,
   },
   list: {
     flex: 1,
@@ -252,6 +312,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#999",
     fontStyle: "italic",
+    marginBottom: 10,
+  },
+  userInfo: {
+    fontSize: 12,
+    textAlign: "center",
+    color: "#007bff",
+    fontWeight: "bold",
   },
   loadingText: {
     textAlign: "center",
@@ -263,5 +330,15 @@ const styles = StyleSheet.create({
     color: "#dc3545",
     fontSize: 16,
     textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#007bff",
+    padding: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });

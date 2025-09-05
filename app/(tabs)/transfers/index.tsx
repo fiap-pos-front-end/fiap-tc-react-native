@@ -26,7 +26,7 @@ export default function TransfersListScreen() {
 
   useEffect(() => {
     setRefreshKey((prev) => prev + 1);
-  }, [transfers.length, loading, error]);
+  }, [transfers?.length, loading, error]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -177,7 +177,7 @@ export default function TransfersListScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ThemedView style={styles.container} key={refreshKey}>
-        {transfers.length === 0 ? (
+        {!transfers || transfers?.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <ThemedText style={styles.emptyIcon}>📊</ThemedText>
             <ThemedText style={styles.emptyTitle}>

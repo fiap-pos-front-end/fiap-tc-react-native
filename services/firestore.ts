@@ -6,6 +6,8 @@ import firestore, {
 export class FirestoreService {
   private db = firestore();
 
+  private activeListeners = new Map<string, () => void>();
+
   private getCurrentUserId(): string | null {
     return auth().currentUser?.uid || null;
   }
@@ -16,6 +18,32 @@ export class FirestoreService {
       throw new Error("User not authenticated");
     }
     return userId;
+  }
+
+  public disconnectAllListeners(): void {
+    this.activeListeners.forEach((unsubscribe, key) => {
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error(`❌ Erro ao desconectar listener ${key}:`, error);
+      }
+    });
+
+    this.activeListeners.clear();
+  }
+
+  public disconnectUserListeners(userId: string): void {
+    const userListeners = Array.from(this.activeListeners.keys()).filter(
+      (key) => key.includes(userId)
+    );
+
+    userListeners.forEach((key) => {
+      const unsubscribe = this.activeListeners.get(key);
+      if (unsubscribe) {
+        unsubscribe();
+        this.activeListeners.delete(key);
+      }
+    });
   }
 
   async addDocument<T extends Record<string, any>>(
@@ -64,7 +92,13 @@ export class FirestoreService {
       let query = this.db.collection(collection).where("userId", "==", userId);
 
       if (orderBy) {
-        query = query.orderBy(orderBy, "desc") as any;
+        try {
+          query = query.orderBy(orderBy, "desc") as any;
+        } catch (indexError) {
+          console.warn(
+            `Index not available for orderBy ${orderBy}, fetching without ordering`
+          );
+        }
       }
 
       if (limit) {
@@ -72,10 +106,27 @@ export class FirestoreService {
       }
 
       const snapshot = await query.get();
-      return snapshot.docs.map((doc) => ({
+      let results = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as T[];
+
+      if (orderBy && results.length > 0) {
+        results = results.sort((a: any, b: any) => {
+          const aValue = a[orderBy];
+          const bValue = b[orderBy];
+
+          if (typeof aValue === "string" && typeof bValue === "string") {
+            return aValue.localeCompare(bValue);
+          }
+
+          if (aValue < bValue) return -1;
+          if (aValue > bValue) return 1;
+          return 0;
+        });
+      }
+
+      return results;
     } catch (error) {
       console.error("Error getting collection:", error);
       throw error;
@@ -134,7 +185,14 @@ export class FirestoreService {
       return () => {};
     }
 
-    return this.db
+    const listenerKey = `doc_${collection}_${id}_${userId}`;
+
+    const existingListener = this.activeListeners.get(listenerKey);
+    if (existingListener) {
+      existingListener();
+    }
+
+    const unsubscribe = this.db
       .collection(collection)
       .doc(id)
       .onSnapshot(
@@ -155,6 +213,13 @@ export class FirestoreService {
           callback(null);
         }
       );
+
+    this.activeListeners.set(listenerKey, unsubscribe);
+
+    return () => {
+      unsubscribe();
+      this.activeListeners.delete(listenerKey);
+    };
   }
 
   onCollectionSnapshot<T>(
@@ -169,25 +234,106 @@ export class FirestoreService {
       return () => {};
     }
 
-    let query = this.db.collection(collection).where("userId", "==", userId);
+    const listenerKey = `collection_${collection}_${userId}_${
+      orderBy || "no-order"
+    }`;
 
-    if (orderBy) {
-      query = query.orderBy(orderBy, "desc") as any;
+    const existingListener = this.activeListeners.get(listenerKey);
+    if (existingListener) {
+      existingListener();
     }
 
-    return query.onSnapshot(
+    let query = this.db.collection(collection).where("userId", "==", userId);
+
+    let hasOrdering = false;
+    if (orderBy) {
+      try {
+        query = query.orderBy(orderBy, "desc") as any;
+        hasOrdering = true;
+      } catch (error) {
+        console.warn(
+          `Could not add orderBy ${orderBy} to real-time query, will sort in memory`
+        );
+        hasOrdering = false;
+      }
+    }
+
+    const unsubscribe = query.onSnapshot(
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
+        let data = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as T[];
+
+        if (orderBy && !hasOrdering && data.length > 0) {
+          data = data.sort((a: any, b: any) => {
+            const aValue = a[orderBy];
+            const bValue = b[orderBy];
+
+            if (typeof aValue === "string" && typeof bValue === "string") {
+              return aValue.localeCompare(bValue);
+            }
+
+            if (aValue < bValue) return -1;
+            if (aValue > bValue) return 1;
+            return 0;
+          });
+        }
+
         callback(data);
       },
-      (error) => {
+      (error: any) => {
         console.error("Collection snapshot error:", error);
-        callback([]);
+
+        if (error.code === "failed-precondition" && orderBy) {
+          const simpleQuery = this.db
+            .collection(collection)
+            .where("userId", "==", userId);
+
+          return simpleQuery.onSnapshot(
+            (snapshot) => {
+              let data = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              })) as T[];
+
+              if (orderBy && data.length > 0) {
+                data = data.sort((a: any, b: any) => {
+                  const aValue = a[orderBy];
+                  const bValue = b[orderBy];
+
+                  if (
+                    typeof aValue === "string" &&
+                    typeof bValue === "string"
+                  ) {
+                    return aValue.localeCompare(bValue);
+                  }
+
+                  if (aValue < bValue) return -1;
+                  if (aValue > bValue) return 1;
+                  return 0;
+                });
+              }
+
+              callback(data);
+            },
+            (retryError) => {
+              console.error("Retry also failed:", retryError);
+              callback([]);
+            }
+          );
+        } else {
+          callback([]);
+        }
       }
     );
+
+    this.activeListeners.set(listenerKey, unsubscribe);
+
+    return () => {
+      unsubscribe();
+      this.activeListeners.delete(listenerKey);
+    };
   }
 
   async queryCollection<T>(
@@ -222,3 +368,5 @@ export class FirestoreService {
     return this.getCurrentUserId();
   }
 }
+
+export const firestoreService = new FirestoreService();

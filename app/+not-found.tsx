@@ -13,7 +13,7 @@ export default function NotFoundScreen() {
           Essa página não existe.
         </ThemedText>
         <Link href="/(tabs)/dashboard" style={styles.link}>
-          <ThemedText type="link">Ir para o login!</ThemedText>
+          <ThemedText type="link">Ir para a página inicial!</ThemedText>
         </Link>
       </ThemedView>
     </>

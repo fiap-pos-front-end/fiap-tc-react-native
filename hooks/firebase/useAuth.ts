@@ -1,3 +1,4 @@
+import { FirestoreService } from "@/services/firestore";
 import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useEffect, useState } from "react";
 
@@ -13,7 +14,23 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
 
+  const firestoreService = new FirestoreService();
+
+  const clearAppCache = async () => {
+    try {
+      firestoreService.disconnectAllListeners();
+
+      if (global.gc) {
+        global.gc();
+      }
+    } catch (error) {
+      console.error("❌ Erro ao limpar cache:", error);
+    }
+  };
+
   function onAuthStateChanged(user: FirebaseAuthTypes.User | null) {
+    const previousUser = user;
+
     if (user) {
       setUser({
         uid: user.uid,
@@ -22,8 +39,15 @@ export function useAuth() {
         emailVerified: user.emailVerified,
       });
     } else {
+      const hadUser = !!previousUser;
+
       setUser(null);
+
+      if (hadUser) {
+        clearAppCache();
+      }
     }
+
     if (initializing) setInitializing(false);
     setLoading(false);
   }
@@ -62,6 +86,8 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
+      firestoreService.disconnectAllListeners();
+
       const userCredential = await auth().signInWithEmailAndPassword(
         email,
         password
@@ -77,9 +103,19 @@ export function useAuth() {
   const signOut = async () => {
     setLoading(true);
     try {
+      const currentUserId = user?.uid;
+
+      if (currentUserId) {
+        firestoreService.disconnectUserListeners(currentUserId);
+      }
+
+      await clearAppCache();
+
       await auth().signOut();
+
       return { success: true };
     } catch (error: any) {
+      console.error("❌ Erro no logout:", error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
@@ -135,5 +171,6 @@ export function useAuth() {
     sendEmailVerification,
     updateProfile,
     isAuthenticated: !!user,
+    clearAppCache,
   };
 }

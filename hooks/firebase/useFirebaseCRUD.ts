@@ -1,133 +1,348 @@
-import { BaseEntity } from "@/types";
-import { useCallback, useEffect, useState } from "react";
-import { firestoreService } from "./useFirestore";
+import { FirestoreService } from "@/services/firestore";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "./useAuth";
 
-interface FirebaseCRUDResult<T extends BaseEntity> {
+interface UseFirestoreState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface UseFirestoreCollectionState<T> {
   data: T[];
   loading: boolean;
   error: string | null;
-  create: (item: Omit<T, "id" | "userId">) => Promise<string>;
-  update: (id: string, item: Partial<T>) => Promise<void>;
-  remove: (id: string) => Promise<void>;
-  findById: (id: string) => T | undefined;
-  clear: () => Promise<void>;
-  refresh: () => Promise<void>;
 }
 
-export function useFirebaseCRUD<T extends BaseEntity>(
-  collectionName: string,
-  orderBy?: string
-): FirebaseCRUDResult<T> {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const firestoreService = new FirestoreService();
+
+export function useFirestoreDocument<T>(collection: string, id: string | null) {
+  const { user } = useAuth();
+  const [state, setState] = useState<UseFirestoreState<T>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
 
-    const unsubscribe = firestoreService.onCollectionSnapshot<T>(
-      collectionName,
-      (newData: T[]) => {
-        setData(newData);
-        setLoading(false);
-      },
-      orderBy
-    );
+    if (!id || !user?.uid) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
 
-    return unsubscribe;
-  }, [collectionName, orderBy]);
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const unsubscribe = firestoreService.onDocumentSnapshot<T>(
+        collection,
+        id,
+        (data) => {
+          setState({ data, loading: false, error: null });
+        }
+      );
+
+      unsubscribeRef.current = unsubscribe;
+
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
+      };
+    } catch (error) {
+      setState({
+        data: null,
+        loading: false,
+        error: (error as Error).message,
+      });
+    }
+  }, [collection, id, user?.uid]);
+
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, []);
+
+  const updateDocument = useCallback(
+    async (data: Partial<T>) => {
+      if (!id) return;
+
+      try {
+        await firestoreService.updateDocument(collection, id, data);
+      } catch (error) {
+        setState((prev) => ({ ...prev, error: (error as Error).message }));
+        throw error;
+      }
+    },
+    [collection, id]
+  );
+
+  const deleteDocument = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      await firestoreService.deleteDocument(collection, id);
+    } catch (error) {
+      setState((prev) => ({ ...prev, error: (error as Error).message }));
+      throw error;
+    }
+  }, [collection, id]);
+
+  return {
+    ...state,
+    updateDocument,
+    deleteDocument,
+  };
+}
+
+export function useFirestoreCollection<T>(
+  collection: string,
+  orderBy?: string
+) {
+  const { user } = useAuth();
+  const [state, setState] = useState<UseFirestoreCollectionState<T>>({
+    data: [],
+    loading: true,
+    error: null,
+  });
+
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  const lastUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const currentUserId = user?.uid || null;
+
+    if (lastUserIdRef.current !== currentUserId) {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
+      setState({ data: [], loading: true, error: null });
+
+      lastUserIdRef.current = currentUserId;
+    }
+
+    if (!user?.uid) {
+      setState({ data: [], loading: false, error: null });
+      return;
+    }
+
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const unsubscribe = firestoreService.onCollectionSnapshot<T>(
+        collection,
+        (data) => {
+          setState({ data, loading: false, error: null });
+        },
+        orderBy
+      );
+
+      unsubscribeRef.current = unsubscribe;
+
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
+      };
+    } catch (error) {
+      setState({
+        data: [],
+        loading: false,
+        error: (error as Error).message,
+      });
+    }
+  }, [collection, orderBy, user?.uid]);
+
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, []);
+
+  const addDocument = useCallback(
+    async (data: Omit<T, "id" | "userId">) => {
+      try {
+        const id = await firestoreService.addDocument(collection, data);
+        return id;
+      } catch (error) {
+        setState((prev) => ({ ...prev, error: (error as Error).message }));
+        throw error;
+      }
+    },
+    [collection]
+  );
+
+  const queryDocuments = useCallback(
+    async (field: string, operator: any, value: any) => {
+      try {
+        setState((prev) => ({ ...prev, loading: true, error: null }));
+        const data = await firestoreService.queryCollection<T>(
+          collection,
+          field,
+          operator,
+          value
+        );
+        setState((prev) => ({ ...prev, data, loading: false, error: null }));
+        return data;
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: (error as Error).message,
+        }));
+        throw error;
+      }
+    },
+    [collection]
+  );
+
+  return {
+    ...state,
+    addDocument,
+    queryDocuments,
+  };
+}
+
+export function useFirebaseCRUD<T>() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const create = useCallback(
-    async (item: Omit<T, "id" | "userId">): Promise<string> => {
+    async (collection: string, data: Omit<T, "id" | "userId">) => {
       try {
+        setLoading(true);
         setError(null);
-        const id = await firestoreService.addDocument<T>(collectionName, item);
+        const id = await firestoreService.addDocument(collection, data);
         return id;
       } catch (err) {
         const errorMessage = (err as Error).message;
         setError(errorMessage);
-        throw new Error(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
       }
     },
-    [collectionName]
+    []
   );
 
-  const update = useCallback(
-    async (id: string, item: Partial<T>): Promise<void> => {
-      try {
-        setError(null);
-        await firestoreService.updateDocument<T>(collectionName, id, item);
-      } catch (err) {
-        const errorMessage = (err as Error).message;
-        setError(errorMessage);
-        throw new Error(errorMessage);
-      }
-    },
-    [collectionName]
-  );
-
-  const remove = useCallback(
-    async (id: string): Promise<void> => {
-      try {
-        setError(null);
-        await firestoreService.deleteDocument(collectionName, id);
-      } catch (err) {
-        const errorMessage = (err as Error).message;
-        setError(errorMessage);
-        throw new Error(errorMessage);
-      }
-    },
-    [collectionName]
-  );
-
-  const findById = useCallback(
-    (id: string): T | undefined => {
-      return data.find((item) => item.id === id);
-    },
-    [data]
-  );
-
-  const clear = useCallback(async (): Promise<void> => {
-    try {
-      setError(null);
-      const promises = data.map((item) =>
-        firestoreService.deleteDocument(collectionName, item.id)
-      );
-      await Promise.all(promises);
-    } catch (err) {
-      const errorMessage = (err as Error).message;
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }, [collectionName, data]);
-
-  const refresh = useCallback(async (): Promise<void> => {
+  const read = useCallback(async (collection: string, id: string) => {
     try {
       setLoading(true);
       setError(null);
-      const newData = await firestoreService.getCollection<T>(
-        collectionName,
-        orderBy
-      );
-      setData(newData);
+      const data = await firestoreService.getDocument<T>(collection, id);
+      return data;
     } catch (err) {
       const errorMessage = (err as Error).message;
       setError(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [collectionName, orderBy]);
+  }, []);
+
+  const update = useCallback(
+    async (collection: string, id: string, data: Partial<T>) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await firestoreService.updateDocument(collection, id, data);
+      } catch (err) {
+        const errorMessage = (err as Error).message;
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const remove = useCallback(async (collection: string, id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await firestoreService.deleteDocument(collection, id);
+    } catch (err) {
+      const errorMessage = (err as Error).message;
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getCollection = useCallback(
+    async (collection: string, orderBy?: string, limit?: number) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await firestoreService.getCollection<T>(
+          collection,
+          orderBy,
+          limit
+        );
+        return data;
+      } catch (err) {
+        const errorMessage = (err as Error).message;
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const queryCollection = useCallback(
+    async (collection: string, field: string, operator: any, value: any) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await firestoreService.queryCollection<T>(
+          collection,
+          field,
+          operator,
+          value
+        );
+        return data;
+      } catch (err) {
+        const errorMessage = (err as Error).message;
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   return {
-    data,
     loading,
     error,
     create,
+    read,
     update,
     remove,
-    findById,
-    clear,
-    refresh,
+    getCollection,
+    queryCollection,
+    isAuthenticated: firestoreService.isAuthenticated(),
   };
 }
