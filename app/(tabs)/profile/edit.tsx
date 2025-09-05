@@ -65,7 +65,6 @@ export default function EditProfileScreen() {
     setLoading(true);
 
     try {
-      // Atualizar nome se mudou
       if (displayName.trim() !== user?.displayName) {
         const nameResult = await updateDisplayName(displayName.trim());
         if (!nameResult.success) {
@@ -74,7 +73,6 @@ export default function EditProfileScreen() {
         }
       }
 
-      // Atualizar senha se fornecida
       if (newPassword) {
         const passwordResult = await updatePassword(
           currentPassword,
@@ -110,9 +108,6 @@ export default function EditProfileScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <ThemedView style={styles.content}>
-            {/* Header customizado removido */}
-
-            {/* Email (readonly) */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Email</ThemedText>
               <ThemedView style={styles.readOnlyInput}>
@@ -126,7 +121,6 @@ export default function EditProfileScreen() {
               </ThemedText>
             </ThemedView>
 
-            {/* Nome */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Nome</ThemedText>
               <TextInput
@@ -147,14 +141,12 @@ export default function EditProfileScreen() {
               )}
             </ThemedView>
 
-            {/* Divisor */}
             <ThemedView style={styles.divider}>
               <ThemedText style={styles.dividerText}>
                 Alterar Senha (opcional)
               </ThemedText>
             </ThemedView>
 
-            {/* Senha Atual */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Senha Atual</ThemedText>
               <TextInput
@@ -179,7 +171,6 @@ export default function EditProfileScreen() {
               )}
             </ThemedView>
 
-            {/* Nova Senha */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Nova Senha</ThemedText>
               <TextInput
@@ -204,7 +195,6 @@ export default function EditProfileScreen() {
               </ThemedText>
             </ThemedView>
 
-            {/* Confirmar Senha */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Confirmar Nova Senha</ThemedText>
               <TextInput
@@ -229,7 +219,6 @@ export default function EditProfileScreen() {
               )}
             </ThemedView>
 
-            {/* Botões */}
             <ThemedView style={styles.actions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
@@ -276,7 +265,7 @@ const styles = StyleSheet.create({
     gap: 16,
     minHeight: "100%",
   },
-  // Header styles removidos
+
   field: {
     gap: 4,
   },
@@ -306,7 +295,7 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 6,
     padding: 10,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
   readOnlyText: {
     fontSize: 14,

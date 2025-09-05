@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dateButtonDisabled: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
     borderColor: "#e9ecef",
     opacity: 0.6,
   },

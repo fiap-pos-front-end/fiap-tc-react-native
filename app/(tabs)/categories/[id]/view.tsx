@@ -32,28 +32,6 @@ export default function ViewCategoryScreen() {
     }
   }, [id, getCategoryById]);
 
-  const handleDelete = () => {
-    if (!category) return;
-
-    Alert.alert("Excluir", `Excluir "${category.name}"?`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Excluir",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteCategory(category.id);
-            Alert.alert("Sucesso", "Categoria excluída!", [
-              { text: "OK", onPress: () => router.replace("/categories") },
-            ]);
-          } catch {
-            Alert.alert("Erro", "Falha ao excluir categoria");
-          }
-        },
-      },
-    ]);
-  };
-
   const handleEdit = () => {
     if (category) {
       router.push(`/categories/${category.id}/edit`);
@@ -100,19 +78,6 @@ export default function ViewCategoryScreen() {
           >
             <MaterialCommunityIcons name="pencil" size={16} color="#007bff" />
             <ThemedText style={styles.editText}>Editar</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={handleDelete}
-            disabled={loading}
-          >
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={16}
-              color="#dc3545"
-            />
-            <ThemedText style={styles.deleteText}>Excluir</ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>
@@ -195,25 +160,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#007bff",
   },
-  deleteBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#dc3545",
-  },
   editText: {
     fontSize: 13,
     fontWeight: "500",
     color: "#007bff",
-  },
-  deleteText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#dc3545",
   },
 });

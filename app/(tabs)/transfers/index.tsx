@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
     alignItems: "center",
   },
   cancelText: {

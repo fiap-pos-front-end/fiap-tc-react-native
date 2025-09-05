@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 6,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   preview: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 6,
     gap: 8,

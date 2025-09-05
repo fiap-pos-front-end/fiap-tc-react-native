@@ -1,15 +1,20 @@
+import { AttachmentViewer } from "@/components/AttachmentViewer";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { DatePicker } from "@/components/DatePicker";
+import { SimpleFilePicker } from "@/components/SimpleFilePicker";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCategories } from "@/contexts/CategoryContext";
 import { useTransfers } from "@/contexts/TransferContext";
+import { useTransferAttachments } from "@/hooks/firebase/useStorage";
 import { TransactionType, Transfer } from "@/types";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -25,6 +30,7 @@ export default function EditTransferScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getTransferById, updateTransfer, loading } = useTransfers();
   const { categories } = useCategories();
+  const { uploadAttachment, uploading, progress } = useTransferAttachments();
 
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -34,6 +40,10 @@ export default function EditTransferScreen() {
   const [notes, setNotes] = useState("");
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Estados para anexos
+  const [newImages, setNewImages] = useState<string[]>([]);
+  const [attachmentKey, setAttachmentKey] = useState(0); // Para forçar re-render do AttachmentViewer
 
   useEffect(() => {
     if (id) {
@@ -105,6 +115,17 @@ export default function EditTransferScreen() {
     }
   };
 
+  // Função para adicionar nova imagem
+  const handleImageSelected = (imageUri: string) => {
+    setNewImages((prev) => [...prev, imageUri]);
+    Alert.alert("Sucesso", "Foto adicionada!");
+  };
+
+  // Função para remover nova imagem (antes do upload)
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       return;
@@ -127,7 +148,21 @@ export default function EditTransferScreen() {
         notes: notes.trim() || undefined,
       };
 
+      // Atualizar a transferência
       await updateTransfer(updatedTransfer);
+
+      // Fazer upload de novas imagens
+      if (newImages.length > 0) {
+        for (const imageUri of newImages) {
+          try {
+            await uploadAttachment(imageUri, transfer.id, "image");
+          } catch (error) {
+            console.error("Erro ao fazer upload de imagem:", error);
+          }
+        }
+        // Forçar re-render do AttachmentViewer após upload
+        setAttachmentKey((prev) => prev + 1);
+      }
 
       Alert.alert("Sucesso", "Transferência atualizada!", [
         { text: "OK", onPress: () => router.back() },
@@ -137,10 +172,12 @@ export default function EditTransferScreen() {
     }
   };
 
+  const isLoading = loading || uploading;
+
   if (!transfer) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#666" />
         </ThemedView>
@@ -150,7 +187,7 @@ export default function EditTransferScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -173,7 +210,7 @@ export default function EditTransferScreen() {
                 }}
                 placeholder="Digite a descrição"
                 placeholderTextColor="#999"
-                editable={!loading}
+                editable={!isLoading}
               />
               {errors.description && (
                 <ThemedText style={styles.error}>
@@ -196,7 +233,7 @@ export default function EditTransferScreen() {
                   placeholder="0,00"
                   placeholderTextColor="#999"
                   keyboardType="numeric"
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </ThemedView>
               {errors.amount && (
@@ -213,7 +250,7 @@ export default function EditTransferScreen() {
                     type === TransactionType.INCOME && styles.incomeActive,
                   ]}
                   onPress={() => setType(TransactionType.INCOME)}
-                  disabled={loading}
+                  disabled={isLoading}
                 >
                   <ThemedText
                     style={[
@@ -231,7 +268,7 @@ export default function EditTransferScreen() {
                     type === TransactionType.EXPENSE && styles.expenseActive,
                   ]}
                   onPress={() => setType(TransactionType.EXPENSE)}
-                  disabled={loading}
+                  disabled={isLoading}
                 >
                   <ThemedText
                     style={[
@@ -257,7 +294,7 @@ export default function EditTransferScreen() {
                     setCategoryId(id);
                     clearFieldError("categoryId");
                   }}
-                  disabled={loading}
+                  disabled={isLoading}
                   placeholder="Selecionar"
                 />
               </ThemedView>
@@ -278,7 +315,7 @@ export default function EditTransferScreen() {
                 }}
                 label=""
                 placeholder="Selecionar data"
-                editable={!loading}
+                editable={!isLoading}
               />
               {errors.date && (
                 <ThemedText style={styles.error}>{errors.date}</ThemedText>
@@ -296,27 +333,98 @@ export default function EditTransferScreen() {
                 multiline
                 numberOfLines={2}
                 textAlignVertical="top"
-                editable={!loading}
+                editable={!isLoading}
               />
+            </ThemedView>
+
+            {/* Seção de Anexos */}
+            <ThemedView style={styles.field}>
+              <ThemedText style={styles.label}>Anexos</ThemedText>
+
+              {/* Anexos existentes usando AttachmentViewer */}
+              <AttachmentViewer
+                key={attachmentKey}
+                transferId={transfer.id}
+                editable={true}
+              />
+
+              {/* Componente para adicionar novos anexos */}
+              <ThemedView style={styles.newAttachmentSection}>
+                <ThemedText style={styles.sectionTitle}>
+                  Adicionar Anexos
+                </ThemedText>
+                <SimpleFilePicker
+                  onImageSelected={handleImageSelected}
+                  disabled={isLoading}
+                />
+
+                {/* Novas imagens a serem enviadas */}
+                {newImages.length > 0 && (
+                  <ThemedView style={styles.preview}>
+                    <ThemedText style={styles.previewTitle}>
+                      Novas fotos ({newImages.length})
+                    </ThemedText>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                    >
+                      <ThemedView style={styles.imageRow}>
+                        {newImages.map((imageUri, index) => (
+                          <ThemedView key={index} style={styles.imageContainer}>
+                            <Image
+                              source={{ uri: imageUri }}
+                              style={styles.image}
+                            />
+                            <TouchableOpacity
+                              style={styles.removeBtn}
+                              onPress={() => removeNewImage(index)}
+                            >
+                              <MaterialCommunityIcons
+                                name="close"
+                                size={12}
+                                color="#666"
+                              />
+                            </TouchableOpacity>
+                          </ThemedView>
+                        ))}
+                      </ThemedView>
+                    </ScrollView>
+                  </ThemedView>
+                )}
+
+                {/* Barra de progresso de upload */}
+                {uploading && (
+                  <ThemedView style={styles.progressContainer}>
+                    <ThemedText style={styles.progressText}>
+                      Enviando... {Math.round(progress)}%
+                    </ThemedText>
+                    <ThemedView style={styles.progressBar}>
+                      <ThemedView
+                        style={[styles.progressFill, { width: `${progress}%` }]}
+                      />
+                    </ThemedView>
+                  </ThemedView>
+                )}
+              </ThemedView>
             </ThemedView>
 
             <ThemedView style={styles.actions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => router.back()}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <ThemedText style={styles.cancelTxt}>Cancelar</ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.saveBtn, loading && styles.disabled]}
+                style={[styles.saveBtn, isLoading && styles.disabled]}
                 onPress={handleSave}
-                disabled={loading}
+                disabled={isLoading}
               >
-                {loading && <ActivityIndicator size="small" color="#fff" />}
+                {isLoading && <ActivityIndicator size="small" color="#fff" />}
                 <ThemedText style={styles.saveTxt}>
-                  {loading ? "Salvando" : "Salvar"}
+                  {isLoading ? "Salvando" : "Salvar"}
                 </ThemedText>
               </TouchableOpacity>
             </ThemedView>
@@ -330,7 +438,7 @@ export default function EditTransferScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
   keyboardView: {
     flex: 1,
@@ -435,6 +543,81 @@ const styles = StyleSheet.create({
   picker: {
     borderRadius: 6,
     overflow: "hidden",
+  },
+  newAttachmentSection: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#495057",
+    marginBottom: 4,
+  },
+  preview: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 6,
+  },
+  previewTitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#666",
+  },
+  imageRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  imageContainer: {
+    position: "relative",
+  },
+  image: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+  },
+  removeBtn: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  progressContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: "#f0f8ff",
+    borderRadius: 6,
+  },
+  progressText: {
+    fontSize: 11,
+    color: "#007bff",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#007bff",
+    borderRadius: 2,
   },
   actions: {
     flexDirection: "row",

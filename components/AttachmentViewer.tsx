@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     padding: 30,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e0e0e0",

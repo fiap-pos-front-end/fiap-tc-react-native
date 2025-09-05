@@ -71,14 +71,22 @@ export default function AddTransferScreen() {
         amount.replace(/\./g, "").replace(",", ".")
       );
 
-      const transferId = await addTransfer({
+      // Criar objeto de dados sem valores undefined
+      const transferData: any = {
         description: description.trim(),
         amount: numericAmount,
         type,
         categoryId,
         date,
-        notes: notes.trim() || undefined,
-      });
+      };
+
+      // Só adicionar notes se não estiver vazio
+      const trimmedNotes = notes.trim();
+      if (trimmedNotes) {
+        transferData.notes = trimmedNotes;
+      }
+
+      const transferId = await addTransfer(transferData);
 
       if (selectedImages.length > 0) {
         for (const imageUri of selectedImages) {
@@ -90,6 +98,7 @@ export default function AddTransferScreen() {
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error) {
+      console.error("Erro ao criar transferência:", error);
       Alert.alert("Erro", "Falha ao criar transferência");
     }
   };
@@ -333,7 +342,7 @@ export default function AddTransferScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
   keyboardView: {
     flex: 1,
