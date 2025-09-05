@@ -57,7 +57,6 @@ export const storage = {
         STORAGE_KEYS.CATEGORIES,
         STORAGE_KEYS.TRANSFERS,
       ]);
-      console.log("Storage cleared successfully");
     } catch (error) {
       console.error("Error clearing storage:", error);
       throw error;
@@ -67,7 +66,6 @@ export const storage = {
   async clearCategories(): Promise<void> {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-      console.log("Categories cleared successfully");
     } catch (error) {
       console.error("Error clearing categories:", error);
       throw error;
@@ -77,7 +75,6 @@ export const storage = {
   async clearTransfers(): Promise<void> {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.TRANSFERS);
-      console.log("Transfers cleared successfully");
     } catch (error) {
       console.error("Error clearing transfers:", error);
       throw error;

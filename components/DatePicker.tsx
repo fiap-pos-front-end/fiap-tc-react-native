@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Modal, StyleSheet, TouchableOpacity } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import React, { useState } from "react";
+import { Modal, StyleSheet, TouchableOpacity } from "react-native";
+import { Calendar } from "react-native-calendars";
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 
 interface DatePickerProps {
   selectedDate: string;
@@ -15,8 +15,8 @@ interface DatePickerProps {
 export const DatePicker: React.FC<DatePickerProps> = ({
   selectedDate,
   onDateSelect,
-  label = 'Data',
-  placeholder = 'Selecionar data',
+  label = "Data",
+  placeholder = "Selecionar data",
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -24,54 +24,47 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const closeDatePicker = () => setModalVisible(false);
 
   const handleDateSelect = (day: any) => {
-    const dateString = day.dateString; // Format: YYYY-MM-DD
+    const dateString = day.dateString;
 
-    // Ensure the date string is treated as a local date to avoid timezone issues
-    const [year, month, dayNum] = dateString.split('-').map(Number);
+    const [year, month, dayNum] = dateString.split("-").map(Number);
     const localDate = new Date(year, month - 1, dayNum);
-    const localDateString = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(
-      localDate.getDate()
-    ).padStart(2, '0')}`;
+    const localDateString = `${localDate.getFullYear()}-${String(
+      localDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
-    // Pass the corrected date string
     onDateSelect(localDateString);
     closeDatePicker();
   };
 
   const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return '';
+    if (!dateString) return "";
 
-    // Parse the date string manually to avoid timezone issues
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // month is 0-indexed
+    const [year, month, day] = dateString.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
 
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    return date.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
-  // Ensure dates are always treated as local dates to avoid timezone issues
   const ensureLocalDate = (dateString: string) => {
-    if (!dateString) return '';
+    if (!dateString) return "";
 
-    // Parse the date string and create a local date object
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split("-").map(Number);
     const localDate = new Date(year, month - 1, day);
 
-    // Return the date in YYYY-MM-DD format using local date methods
-    return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(
-      localDate.getDate()
-    ).padStart(2, '0')}`;
+    return `${localDate.getFullYear()}-${String(
+      localDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
   };
 
-  // Get today's date in local timezone to avoid timezone issues
   const getTodayString = () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
@@ -80,7 +73,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   return (
     <>
       <ThemedView style={styles.container}>
-        <ThemedText type='defaultSemiBold'>{label}</ThemedText>
+        <ThemedText type="defaultSemiBold">{label}</ThemedText>
 
         <TouchableOpacity style={styles.dateButton} onPress={openDatePicker}>
           <ThemedText style={styles.dateText}>
@@ -89,11 +82,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         </TouchableOpacity>
       </ThemedView>
 
-      <Modal animationType='slide' transparent={true} visible={modalVisible} onRequestClose={closeDatePicker}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeDatePicker}
+      >
         <ThemedView style={styles.modalOverlay}>
           <ThemedView style={styles.modalContent}>
             <ThemedView style={styles.modalHeader}>
-              <ThemedText type='title'>Selecionar Data</ThemedText>
+              <ThemedText type="title">Selecionar Data</ThemedText>
               <TouchableOpacity onPress={closeDatePicker}>
                 <ThemedText style={styles.closeButton}>✕</ThemedText>
               </TouchableOpacity>
@@ -105,28 +103,31 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               markedDates={{
                 [ensureLocalDate(selectedDate)]: {
                   selected: true,
-                  selectedColor: '#007bff',
+                  selectedColor: "#007bff",
                 },
                 [today]: {
                   today: true,
-                  textColor: '#007bff',
+                  textColor: "#007bff",
                 },
               }}
               theme={{
-                todayTextColor: '#007bff',
-                selectedDayBackgroundColor: '#007bff',
-                selectedDayTextColor: '#ffffff',
-                arrowColor: '#007bff',
-                monthTextColor: '#2d3748',
-                indicatorColor: '#007bff',
+                todayTextColor: "#007bff",
+                selectedDayBackgroundColor: "#007bff",
+                selectedDayTextColor: "#ffffff",
+                arrowColor: "#007bff",
+                monthTextColor: "#2d3748",
+                indicatorColor: "#007bff",
                 textDayFontSize: 16,
                 textMonthFontSize: 18,
                 textDayHeaderFontSize: 14,
-                todayBackgroundColor: 'transparent',
+                todayBackgroundColor: "transparent",
               }}
             />
 
-            <TouchableOpacity style={styles.todayButton} onPress={() => handleDateSelect({ dateString: today })}>
+            <TouchableOpacity
+              style={styles.todayButton}
+              onPress={() => handleDateSelect({ dateString: today })}
+            >
               <ThemedText style={styles.todayButtonText}>Hoje</ThemedText>
             </TouchableOpacity>
           </ThemedView>
@@ -142,56 +143,56 @@ const styles = StyleSheet.create({
   },
   dateButton: {
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
     borderRadius: 8,
     padding: 15,
-    backgroundColor: 'white',
-    alignItems: 'center',
+    backgroundColor: "white",
+    alignItems: "center",
     minHeight: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   dateText: {
     fontSize: 16,
-    color: '#2d3748',
-    textAlign: 'center',
+    color: "#2d3748",
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
-    width: '90%',
-    maxHeight: '80%',
+    width: "90%",
+    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#dee2e6',
+    borderBottomColor: "#dee2e6",
   },
   closeButton: {
     fontSize: 24,
-    color: '#6c757d',
+    color: "#6c757d",
     padding: 5,
   },
   todayButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 15,
   },
   todayButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
