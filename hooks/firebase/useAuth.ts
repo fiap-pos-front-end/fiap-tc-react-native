@@ -62,48 +62,132 @@ export function useAuth() {
     email: string,
     password: string,
     displayName?: string
-  ) => {
-    setLoading(true);
+  ): Promise<{ success: boolean; user?: any; error?: string }> => {
     try {
+      setLoading(true);
+
       const userCredential = await auth().createUserWithEmailAndPassword(
         email,
         password
       );
+      const firebaseUser = userCredential.user;
 
-      if (displayName && userCredential.user) {
-        await userCredential.user.updateProfile({
-          displayName: displayName,
+      if (displayName && displayName.trim()) {
+        await firebaseUser.updateProfile({
+          displayName: displayName.trim(),
+        });
+
+        await firebaseUser.reload();
+
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: displayName.trim(),
+          emailVerified: firebaseUser.emailVerified,
         });
       }
 
-      return { success: true, user: userCredential.user };
+      try {
+        await firebaseUser.sendEmailVerification();
+      } catch (emailError) {
+        console.warn("Erro ao enviar email de verificação:", emailError);
+      }
+
+      return {
+        success: true,
+        user: {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: displayName?.trim() || firebaseUser.displayName,
+          emailVerified: firebaseUser.emailVerified,
+        },
+      };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      console.error("Erro no signup:", error);
+
+      let errorMessage = "Erro ao criar conta";
+
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          errorMessage = "Este email já está em uso";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Email inválido";
+          break;
+        case "auth/weak-password":
+          errorMessage = "Senha muito fraca";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "Erro de conexão. Verifique sua internet";
+          break;
+        default:
+          errorMessage = error.message || "Erro desconhecido";
+      }
+
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
-    setLoading(true);
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: any; error?: string }> => {
     try {
+      setLoading(true);
+
       firestoreService.disconnectAllListeners();
 
       const userCredential = await auth().signInWithEmailAndPassword(
         email,
         password
       );
-      return { success: true, user: userCredential.user };
+
+      return {
+        success: true,
+        user: {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName,
+          emailVerified: userCredential.user.emailVerified,
+        },
+      };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      console.error("Erro no signin:", error);
+
+      let errorMessage = "Erro ao fazer login";
+
+      switch (error.code) {
+        case "auth/user-not-found":
+          errorMessage = "Usuário não encontrado";
+          break;
+        case "auth/wrong-password":
+          errorMessage = "Senha incorreta";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Email inválido";
+          break;
+        case "auth/user-disabled":
+          errorMessage = "Conta desabilitada";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "Erro de conexão. Verifique sua internet";
+          break;
+        default:
+          errorMessage = error.message || "Erro desconhecido";
+      }
+
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   };
 
-  const signOut = async () => {
-    setLoading(true);
+  const signOut = async (): Promise<{ success: boolean; error?: string }> => {
     try {
+      setLoading(true);
+
       const currentUserId = user?.uid;
 
       if (currentUserId) {
@@ -123,12 +207,29 @@ export function useAuth() {
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (
+    email: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       await auth().sendPasswordResetEmail(email);
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      console.error("Erro ao resetar senha:", error);
+
+      let errorMessage = "Erro ao enviar email de recuperação";
+
+      switch (error.code) {
+        case "auth/user-not-found":
+          errorMessage = "Email não encontrado";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Email inválido";
+          break;
+        default:
+          errorMessage = error.message || "Erro desconhecido";
+      }
+
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -136,25 +237,17 @@ export function useAuth() {
     success: boolean;
     message?: string;
   }> => {
-    setVerificationLoading(true);
-
     try {
       const currentUser = auth().currentUser;
-
       if (!currentUser) {
-        return {
-          success: false,
-          message: "Usuário não encontrado",
-        };
+        return { success: false, message: "Usuário não está logado" };
       }
 
       if (currentUser.emailVerified) {
-        return {
-          success: false,
-          message: "Email já está verificado",
-        };
+        return { success: false, message: "Email já está verificado" };
       }
 
+      setVerificationLoading(true);
       await currentUser.sendEmailVerification();
 
       return {
@@ -164,30 +257,27 @@ export function useAuth() {
     } catch (error: any) {
       console.error("Erro ao enviar verificação:", error);
 
-      let message = "Erro ao enviar email de verificação";
+      let errorMessage = "Erro ao enviar email de verificação";
 
       switch (error.code) {
         case "auth/too-many-requests":
-          message = "Muitas tentativas. Tente novamente mais tarde.";
+          errorMessage = "Muitas tentativas. Tente novamente mais tarde";
           break;
         case "auth/user-disabled":
-          message = "Conta desabilitada";
+          errorMessage = "Conta desabilitada";
           break;
         case "auth/user-not-found":
-          message = "Usuário não encontrado";
+          errorMessage = "Usuário não encontrado";
           break;
         case "auth/unauthorized-domain":
-          message =
+          errorMessage =
             "Domínio não autorizado. Configuração necessária no Firebase.";
           break;
         default:
-          message = error.message || "Erro desconhecido";
+          errorMessage = error.message || "Erro desconhecido";
       }
 
-      return {
-        success: false,
-        message,
-      };
+      return { success: false, message: errorMessage };
     } finally {
       setVerificationLoading(false);
     }
@@ -239,7 +329,7 @@ export function useAuth() {
   const updatePassword = async (
     currentPassword: string,
     newPassword: string
-  ) => {
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const currentUser = auth().currentUser;
 
@@ -278,7 +368,9 @@ export function useAuth() {
     }
   };
 
-  const updateDisplayName = async (newDisplayName: string) => {
+  const updateDisplayName = async (
+    newDisplayName: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const currentUser = auth().currentUser;
 

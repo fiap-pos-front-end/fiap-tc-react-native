@@ -3,8 +3,9 @@ import { ThemedView } from "@/components/ThemedView";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
@@ -14,7 +15,16 @@ import {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, signOut, loading } = useAuthContext();
+  const {
+    user,
+    signOut,
+    loading,
+    sendEmailVerification,
+    checkEmailVerification,
+    verificationLoading,
+  } = useAuthContext();
+
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert("Sair", "Deseja sair da conta?", [
@@ -37,6 +47,43 @@ export default function ProfileScreen() {
   const handleEdit = () => {
     router.push(`/profile/edit`);
   };
+  const handleSendVerification = async () => {
+    const result = await sendEmailVerification();
+
+    if (result.success) {
+      Alert.alert(
+        "Email Enviado",
+        "Verifique sua caixa de entrada e clique no link de verificação. Depois, toque em 'Verificar Status' para atualizar.",
+        [{ text: "OK" }]
+      );
+    } else {
+      Alert.alert(
+        "Erro",
+        result.message || "Falha ao enviar email de verificação"
+      );
+    }
+  };
+
+  const handleCheckVerification = async () => {
+    setIsCheckingVerification(true);
+
+    const result = await checkEmailVerification();
+
+    setIsCheckingVerification(false);
+
+    if (result.success) {
+      if (result.isVerified) {
+        Alert.alert("Sucesso", "Email verificado com sucesso!");
+      } else {
+        Alert.alert(
+          "Aviso",
+          "Email ainda não foi verificado. Verifique sua caixa de entrada."
+        );
+      }
+    } else {
+      Alert.alert("Erro", result.message || "Falha ao verificar status");
+    }
+  };
 
   const getInitials = () => {
     if (user?.displayName) {
@@ -49,6 +96,8 @@ export default function ProfileScreen() {
     }
     return (user?.email || "?")[0].toUpperCase();
   };
+
+  const isLoadingAny = loading || verificationLoading || isCheckingVerification;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -100,14 +149,47 @@ export default function ProfileScreen() {
 
         <ThemedView style={styles.actions}>
           {!user?.emailVerified && (
-            <TouchableOpacity style={styles.verifyBtn} disabled={loading}>
-              <MaterialCommunityIcons
-                name="email-check"
-                size={16}
-                color="#ffc107"
-              />
-              <ThemedText style={styles.verifyText}>Verificar Email</ThemedText>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.verifyBtn}
+                onPress={handleSendVerification}
+                disabled={isLoadingAny}
+              >
+                {verificationLoading ? (
+                  <ActivityIndicator size="small" color="#ffc107" />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="email-send"
+                    size={16}
+                    color="#ffc107"
+                  />
+                )}
+                <ThemedText style={styles.verifyText}>
+                  {verificationLoading ? "Enviando..." : "Enviar Verificação"}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkBtn}
+                onPress={handleCheckVerification}
+                disabled={isLoadingAny}
+              >
+                {isCheckingVerification ? (
+                  <ActivityIndicator size="small" color="#007bff" />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="refresh"
+                    size={16}
+                    color="#007bff"
+                  />
+                )}
+                <ThemedText style={styles.checkText}>
+                  {isCheckingVerification
+                    ? "Verificando..."
+                    : "Verificar Status"}
+                </ThemedText>
+              </TouchableOpacity>
+            </>
           )}
           <TouchableOpacity
             style={styles.editProfileBtn}
@@ -121,7 +203,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.signOutBtn}
             onPress={handleSignOut}
-            disabled={loading}
+            disabled={isLoadingAny}
           >
             <MaterialCommunityIcons name="logout" size={16} color="#dc3545" />
             <ThemedText style={styles.signOutText}>Sair da Conta</ThemedText>

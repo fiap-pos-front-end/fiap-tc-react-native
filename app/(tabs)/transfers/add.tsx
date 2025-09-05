@@ -71,7 +71,6 @@ export default function AddTransferScreen() {
         amount.replace(/\./g, "").replace(",", ".")
       );
 
-      // Criar objeto de dados sem valores undefined
       const transferData: any = {
         description: description.trim(),
         amount: numericAmount,
@@ -80,7 +79,6 @@ export default function AddTransferScreen() {
         date,
       };
 
-      // Só adicionar notes se não estiver vazio
       const trimmedNotes = notes.trim();
       if (trimmedNotes) {
         transferData.notes = trimmedNotes;

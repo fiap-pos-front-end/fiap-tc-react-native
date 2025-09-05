@@ -41,9 +41,8 @@ export default function EditTransferScreen() {
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Estados para anexos
   const [newImages, setNewImages] = useState<string[]>([]);
-  const [attachmentKey, setAttachmentKey] = useState(0); // Para forçar re-render do AttachmentViewer
+  const [attachmentKey, setAttachmentKey] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -115,13 +114,11 @@ export default function EditTransferScreen() {
     }
   };
 
-  // Função para adicionar nova imagem
   const handleImageSelected = (imageUri: string) => {
     setNewImages((prev) => [...prev, imageUri]);
     Alert.alert("Sucesso", "Foto adicionada!");
   };
 
-  // Função para remover nova imagem (antes do upload)
   const removeNewImage = (index: number) => {
     setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
@@ -148,10 +145,8 @@ export default function EditTransferScreen() {
         notes: notes.trim() || undefined,
       };
 
-      // Atualizar a transferência
       await updateTransfer(updatedTransfer);
 
-      // Fazer upload de novas imagens
       if (newImages.length > 0) {
         for (const imageUri of newImages) {
           try {
@@ -160,7 +155,7 @@ export default function EditTransferScreen() {
             console.error("Erro ao fazer upload de imagem:", error);
           }
         }
-        // Forçar re-render do AttachmentViewer após upload
+
         setAttachmentKey((prev) => prev + 1);
       }
 
@@ -337,18 +332,15 @@ export default function EditTransferScreen() {
               />
             </ThemedView>
 
-            {/* Seção de Anexos */}
             <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Anexos</ThemedText>
 
-              {/* Anexos existentes usando AttachmentViewer */}
               <AttachmentViewer
                 key={attachmentKey}
                 transferId={transfer.id}
                 editable={true}
               />
 
-              {/* Componente para adicionar novos anexos */}
               <ThemedView style={styles.newAttachmentSection}>
                 <ThemedText style={styles.sectionTitle}>
                   Adicionar Anexos
@@ -358,7 +350,6 @@ export default function EditTransferScreen() {
                   disabled={isLoading}
                 />
 
-                {/* Novas imagens a serem enviadas */}
                 {newImages.length > 0 && (
                   <ThemedView style={styles.preview}>
                     <ThemedText style={styles.previewTitle}>
@@ -392,7 +383,6 @@ export default function EditTransferScreen() {
                   </ThemedView>
                 )}
 
-                {/* Barra de progresso de upload */}
                 {uploading && (
                   <ThemedView style={styles.progressContainer}>
                     <ThemedText style={styles.progressText}>
