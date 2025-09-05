@@ -6,9 +6,13 @@ import { Category } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -22,6 +26,7 @@ export default function EditCategoryScreen() {
   const [name, setName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("📋");
   const [category, setCategory] = useState<Category | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const icons = getAllIcons();
 
@@ -40,9 +45,25 @@ export default function EditCategoryScreen() {
     }
   }, [id, getCategoryById]);
 
-  const handleSave = async () => {
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
     if (!name.trim()) {
-      Alert.alert("Erro", "Por favor, insira um nome para a categoria");
+      newErrors.name = "Campo obrigatório";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const clearFieldError = (field: string) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
       return;
     }
 
@@ -57,7 +78,7 @@ export default function EditCategoryScreen() {
 
       await updateCategory(updatedCategory);
 
-      Alert.alert("Sucesso", "Categoria atualizada com sucesso!", [
+      Alert.alert("Sucesso", "Categoria atualizada!", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch {
@@ -68,8 +89,9 @@ export default function EditCategoryScreen() {
   if (!category) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedView style={styles.centeredContainer}>
-          <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#666" />
         </ThemedView>
       </SafeAreaView>
     );
@@ -77,22 +99,37 @@ export default function EditCategoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <ThemedView style={styles.content}>
-          <ThemedView style={styles.form}>
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Nome da Categoria</ThemedText>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <ThemedView style={styles.content}>
+            <ThemedView style={styles.field}>
+              <ThemedText style={styles.label}>Nome</ThemedText>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.name && styles.inputError]}
                 value={name}
-                onChangeText={setName}
-                placeholder="Ex: Alimentação"
+                onChangeText={(text) => {
+                  setName(text);
+                  clearFieldError("name");
+                }}
+                placeholder="Digite o nome da categoria"
                 placeholderTextColor="#999"
                 editable={!loading}
               />
+              {errors.name && (
+                <ThemedText style={styles.error}>{errors.name}</ThemedText>
+              )}
             </ThemedView>
 
-            <ThemedView style={styles.inputGroup}>
+            <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Ícone</ThemedText>
               <ThemedView style={styles.iconGrid}>
                 {icons.map((icon, index) => (
@@ -110,9 +147,9 @@ export default function EditCategoryScreen() {
               </ThemedView>
             </ThemedView>
 
-            <ThemedView style={styles.preview}>
+            <ThemedView style={styles.field}>
               <ThemedText style={styles.label}>Prévia</ThemedText>
-              <ThemedView style={styles.previewItem}>
+              <ThemedView style={styles.preview}>
                 <ThemedText style={styles.previewIcon}>
                   {selectedIcon}
                 </ThemedText>
@@ -121,29 +158,30 @@ export default function EditCategoryScreen() {
                 </ThemedText>
               </ThemedView>
             </ThemedView>
-          </ThemedView>
 
-          <ThemedView style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
-            </TouchableOpacity>
+            <ThemedView style={styles.actions}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => router.back()}
+                disabled={loading}
+              >
+                <ThemedText style={styles.cancelTxt}>Cancelar</ThemedText>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.saveButton, loading && styles.disabledButton]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              <ThemedText style={styles.saveButtonText}>
-                {loading ? "Salvando..." : "Salvar"}
-              </ThemedText>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, loading && styles.disabled]}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading && <ActivityIndicator size="small" color="#fff" />}
+                <ThemedText style={styles.saveTxt}>
+                  {loading ? "Salvando" : "Salvar"}
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
           </ThemedView>
-        </ThemedView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -151,9 +189,12 @@ export default function EditCategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
-  centeredContainer: {
+  keyboardView: {
+    flex: 1,
+  },
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -161,107 +202,113 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
+    gap: 16,
+    minHeight: "100%",
   },
-  form: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 24,
+  field: {
+    gap: 4,
   },
   label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: "500",
     color: "#333",
+    marginBottom: 2,
   },
   input: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#ddd",
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: "#fff",
     color: "#333",
+  },
+  inputError: {
+    borderColor: "#dc3545",
+  },
+  error: {
+    fontSize: 11,
+    color: "#dc3545",
+    marginTop: 2,
   },
   iconGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
   },
   iconButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#fff",
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: "#f8f9fa",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   selectedIcon: {
     borderColor: "#007bff",
     backgroundColor: "#e3f2fd",
   },
   iconText: {
-    fontSize: 24,
+    fontSize: 18,
   },
   preview: {
-    marginBottom: 32,
-  },
-  previewItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    backgroundColor: "#f8f9fa",
+    padding: 12,
+    borderRadius: 6,
+    gap: 8,
   },
   previewIcon: {
-    fontSize: 24,
-    marginRight: 15,
+    fontSize: 18,
   },
   previewName: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
     color: "#333",
   },
-  buttonContainer: {
+  actions: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 8,
   },
-  cancelButton: {
+  cancelBtn: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
-    padding: 16,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#999",
     alignItems: "center",
+    backgroundColor: "#fff",
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-  },
-  saveButton: {
+  saveBtn: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    padding: 10,
+    borderRadius: 6,
     backgroundColor: "#007bff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
   },
-  disabledButton: {
-    backgroundColor: "#ccc",
+  disabled: {
+    opacity: 0.6,
   },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  loadingText: {
-    fontSize: 16,
+  cancelTxt: {
+    fontSize: 13,
+    fontWeight: "500",
     color: "#666",
+  },
+  saveTxt: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#fff",
   },
 });

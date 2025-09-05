@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTransferAttachments } from "@/hooks/firebase/useStorage";
+import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -101,7 +102,11 @@ export function AttachmentViewer({
         ) : (
           <ThemedView style={styles.documentIcon}>
             <ThemedText style={styles.documentIconText}>
-              {attachment.type === "document" ? "📄" : "📁"}
+              {attachment.type === "document" ? (
+                <Feather name="file" size={24} color="black" />
+              ) : (
+                <Feather name="folder" size={24} color="black" />
+              )}
             </ThemedText>
           </ThemedView>
         )}
@@ -124,7 +129,9 @@ export function AttachmentViewer({
           style={styles.deleteButton}
           onPress={() => handleDeleteAttachment(attachment)}
         >
-          <ThemedText style={styles.deleteButtonText}>🗑️</ThemedText>
+          <ThemedText style={styles.deleteButtonText}>
+            <FontAwesome name="trash-o" size={24} color="black" />
+          </ThemedText>
         </TouchableOpacity>
       )}
     </ThemedView>
@@ -153,7 +160,9 @@ export function AttachmentViewer({
           Anexos
         </ThemedText>
         <ThemedView style={styles.emptyContainer}>
-          <ThemedText style={styles.emptyIcon}>📎</ThemedText>
+          <ThemedText style={styles.emptyIcon}>
+            <Ionicons name="attach" size={24} color="black" />
+          </ThemedText>
           <ThemedText style={styles.emptyText}>Nenhum anexo</ThemedText>
         </ThemedView>
       </ThemedView>

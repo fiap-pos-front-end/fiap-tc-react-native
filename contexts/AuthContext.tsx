@@ -5,6 +5,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   initializing: boolean;
+  verificationLoading: boolean;
   signUp: (
     email: string,
     password: string,
@@ -18,11 +19,22 @@ interface AuthContextType {
   resetPassword: (
     email: string
   ) => Promise<{ success: boolean; error?: string }>;
-  sendEmailVerification: () => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (updates: {
-    displayName?: string;
-    photoURL?: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+  sendEmailVerification: () => Promise<{
+    success: boolean;
+    message?: string;
+  }>;
+  checkEmailVerification: () => Promise<{
+    success: boolean;
+    isVerified: boolean;
+    message?: string;
+  }>;
+  updatePassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateDisplayName: (
+    newDisplayName: string
+  ) => Promise<{ success: boolean; error?: string }>;
   isAuthenticated: boolean;
 }
 

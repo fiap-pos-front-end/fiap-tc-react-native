@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -102,7 +103,11 @@ export default function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                   >
                     <ThemedText style={styles.showPasswordText}>
-                      {showPassword ? "👁️" : "👁️‍🗨️"}
+                      {showPassword ? (
+                        <FontAwesome name="eye-slash" size={24} color="black" />
+                      ) : (
+                        <FontAwesome name="eye" size={24} color="black" />
+                      )}
                     </ThemedText>
                   </TouchableOpacity>
                 </ThemedView>

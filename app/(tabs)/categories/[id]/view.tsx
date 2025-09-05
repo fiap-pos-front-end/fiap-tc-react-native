@@ -2,6 +2,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCategories } from "@/contexts/CategoryContext";
 import { Category } from "@/types";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -34,27 +35,23 @@ export default function ViewCategoryScreen() {
   const handleDelete = () => {
     if (!category) return;
 
-    Alert.alert(
-      "Excluir Categoria",
-      `Tem certeza que deseja excluir "${category.name}"?\n\nEsta ação não pode ser desfeita.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteCategory(category.id);
-              Alert.alert("Sucesso", "Categoria excluída!", [
-                { text: "OK", onPress: () => router.replace("/categories") },
-              ]);
-            } catch {
-              Alert.alert("Erro", "Falha ao excluir categoria");
-            }
-          },
+    Alert.alert("Excluir", `Excluir "${category.name}"?`, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Excluir",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteCategory(category.id);
+            Alert.alert("Sucesso", "Categoria excluída!", [
+              { text: "OK", onPress: () => router.replace("/categories") },
+            ]);
+          } catch {
+            Alert.alert("Erro", "Falha ao excluir categoria");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleEdit = () => {
@@ -66,7 +63,7 @@ export default function ViewCategoryScreen() {
   if (!category) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedView style={styles.centeredContainer}>
+        <ThemedView style={styles.loadingContainer}>
           <ThemedText style={styles.loadingText}>Carregando...</ThemedText>
         </ThemedView>
       </SafeAreaView>
@@ -75,59 +72,48 @@ export default function ViewCategoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <ThemedView style={styles.content}>
-          <ThemedView style={styles.header}>
-            <ThemedView style={styles.iconContainer}>
-              <ThemedText style={styles.icon}>{category.icon}</ThemedText>
-            </ThemedView>
-            <ThemedText style={styles.title}>{category.name}</ThemedText>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+      >
+        <ThemedView style={styles.header}>
+          <ThemedText style={styles.name}>{category.name}</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.info}>
+          <ThemedView style={styles.row}>
+            <ThemedText style={styles.label}>Nome</ThemedText>
+            <ThemedText style={styles.value}>{category.name}</ThemedText>
           </ThemedView>
 
-          <ThemedView style={styles.infoSection}>
-            <ThemedText style={styles.sectionTitle}>Informações</ThemedText>
-
-            <ThemedView style={styles.infoCard}>
-              <ThemedView style={styles.infoRow}>
-                <ThemedText style={styles.infoLabel}>ID:</ThemedText>
-                <ThemedText style={styles.infoValue}>{category.id}</ThemedText>
-              </ThemedView>
-
-              <ThemedView style={styles.infoRow}>
-                <ThemedText style={styles.infoLabel}>Nome:</ThemedText>
-                <ThemedText style={styles.infoValue}>
-                  {category.name}
-                </ThemedText>
-              </ThemedView>
-
-              <ThemedView style={styles.infoRow}>
-                <ThemedText style={styles.infoLabel}>Ícone:</ThemedText>
-                <ThemedText style={styles.infoValue}>
-                  {category.icon}
-                </ThemedText>
-              </ThemedView>
-            </ThemedView>
+          <ThemedView style={styles.row}>
+            <ThemedText style={styles.label}>Ícone</ThemedText>
+            <ThemedText style={styles.value}>{category.icon}</ThemedText>
           </ThemedView>
+        </ThemedView>
 
-          <ThemedView style={styles.actionsSection}>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEdit}
-              disabled={loading}
-            >
-              <ThemedText style={styles.editButtonText}>✏️ Editar</ThemedText>
-            </TouchableOpacity>
+        <ThemedView style={styles.actions}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={handleEdit}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons name="pencil" size={16} color="#007bff" />
+            <ThemedText style={styles.editText}>Editar</ThemedText>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDelete}
-              disabled={loading}
-            >
-              <ThemedText style={styles.deleteButtonText}>
-                🗑️ Excluir
-              </ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={handleDelete}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={16}
+              color="#dc3545"
+            />
+            <ThemedText style={styles.deleteText}>Excluir</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -137,126 +123,97 @@ export default function ViewCategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
-  centeredContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#666",
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
+    gap: 16,
   },
   header: {
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 32,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#f8f9fa",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    padding: 20,
+    gap: 8,
   },
   icon: {
-    fontSize: 40,
+    fontSize: 48,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-  },
-  infoSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
+  name: {
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 12,
+    textAlign: "center",
   },
-  infoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  info: {
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#f0f0f0",
   },
-  infoRow: {
+  row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
   },
-  infoLabel: {
-    fontSize: 16,
+  label: {
+    fontSize: 13,
     color: "#666",
     fontWeight: "500",
   },
-  infoValue: {
-    fontSize: 16,
+  value: {
+    fontSize: 13,
     color: "#333",
-    fontWeight: "600",
-    flex: 1,
+    fontWeight: "500",
     textAlign: "right",
+    flex: 1,
+    marginLeft: 16,
   },
-  actionsSection: {
+  actions: {
+    flexDirection: "row",
     gap: 12,
   },
-  editButton: {
-    backgroundColor: "#007bff",
-    padding: 16,
-    borderRadius: 12,
+  editBtn: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "center",
+    gap: 6,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#007bff",
   },
-  editButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  deleteButton: {
-    backgroundColor: "#dc3545",
-    padding: 16,
-    borderRadius: 12,
+  deleteBtn: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "center",
+    gap: 6,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#dc3545",
   },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
+  editText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#007bff",
   },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
+  deleteText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#dc3545",
   },
 });

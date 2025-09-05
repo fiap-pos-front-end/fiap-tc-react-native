@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -16,7 +17,7 @@ export default function ProfileScreen() {
   const { user, signOut, loading } = useAuthContext();
 
   const handleSignOut = () => {
-    Alert.alert("Sair da Conta", "Tem certeza que deseja sair?", [
+    Alert.alert("Sair", "Deseja sair da conta?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Sair",
@@ -33,50 +34,98 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleEdit = () => {
+    router.push(`/profile/edit`);
+  };
+
+  const getInitials = () => {
+    if (user?.displayName) {
+      return user.displayName
+        .split(" ")
+        .map((name) => name[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return (user?.email || "?")[0].toUpperCase();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <ThemedView style={styles.content}>
-          <ThemedView style={styles.header}>
-            <ThemedView style={styles.avatarContainer}>
-              <ThemedText style={styles.avatarText}>
-                {(user?.displayName || user?.email || "?")[0].toUpperCase()}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+      >
+        <ThemedView style={styles.header}>
+          <ThemedView style={styles.avatar}>
+            <ThemedText style={styles.avatarText}>{getInitials()}</ThemedText>
+          </ThemedView>
+          <ThemedText style={styles.name}>
+            {user?.displayName || "Usuário"}
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.info}>
+          {user?.displayName && (
+            <ThemedView style={styles.row}>
+              <ThemedText style={styles.label}>Nome</ThemedText>
+              <ThemedText style={styles.value}>{user.displayName}</ThemedText>
+            </ThemedView>
+          )}
+
+          <ThemedView style={styles.row}>
+            <ThemedText style={styles.label}>Email</ThemedText>
+            <ThemedText style={styles.value}>{user?.email}</ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.row}>
+            <ThemedText style={styles.label}>Status</ThemedText>
+            <ThemedView style={styles.statusContainer}>
+              <MaterialCommunityIcons
+                name={user?.emailVerified ? "check-circle" : "alert-circle"}
+                size={14}
+                color={user?.emailVerified ? "#28a745" : "#ffc107"}
+              />
+              <ThemedText
+                style={[
+                  styles.status,
+                  user?.emailVerified ? styles.verified : styles.unverified,
+                ]}
+              >
+                {user?.emailVerified ? "Verificado" : "Não verificado"}
               </ThemedText>
             </ThemedView>
-            <ThemedText style={styles.title}>Meu Perfil</ThemedText>
           </ThemedView>
+        </ThemedView>
 
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>
-              Informações Pessoais
-            </ThemedText>
-
-            <ThemedView style={styles.infoCard}>
-              {user?.displayName && (
-                <ThemedView style={styles.infoRow}>
-                  <ThemedText style={styles.infoLabel}>Nome:</ThemedText>
-                  <ThemedText style={styles.infoValue}>
-                    {user?.displayName || "Não informado"}
-                  </ThemedText>
-                </ThemedView>
-              )}
-
-              <ThemedView style={styles.infoRow}>
-                <ThemedText style={styles.infoLabel}>Email:</ThemedText>
-                <ThemedText style={styles.infoValue}>{user?.email}</ThemedText>
-              </ThemedView>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView style={styles.actionsSection}>
-            <TouchableOpacity
-              style={styles.signOutButton}
-              onPress={handleSignOut}
-              disabled={loading}
-            >
-              <ThemedText style={styles.signOutButtonText}>🚪 Sair</ThemedText>
+        <ThemedView style={styles.actions}>
+          {!user?.emailVerified && (
+            <TouchableOpacity style={styles.verifyBtn} disabled={loading}>
+              <MaterialCommunityIcons
+                name="email-check"
+                size={16}
+                color="#ffc107"
+              />
+              <ThemedText style={styles.verifyText}>Verificar Email</ThemedText>
             </TouchableOpacity>
-          </ThemedView>
+          )}
+          <TouchableOpacity
+            style={styles.editProfileBtn}
+            onPress={handleEdit}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons name="pencil" size={16} color="#007bff" />
+            <ThemedText style={styles.editProfileText}>Editar</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.signOutBtn}
+            onPress={handleSignOut}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons name="logout" size={16} color="#dc3545" />
+            <ThemedText style={styles.signOutText}>Sair da Conta</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -86,182 +135,142 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#fff",
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
+    gap: 16,
   },
   header: {
     alignItems: "center",
-    marginBottom: 30,
-    marginTop: 20,
+    padding: 20,
+    gap: 12,
   },
-  avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#007bff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
   },
   avatarText: {
-    fontSize: 32,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
     color: "#fff",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
+  name: {
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 16,
+    textAlign: "center",
   },
-  infoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  info: {
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#f0f0f0",
   },
-  infoRow: {
+  row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
   },
-  infoLabel: {
-    fontSize: 16,
+  label: {
+    fontSize: 13,
     color: "#666",
     fontWeight: "500",
   },
-  infoValue: {
-    fontSize: 16,
+  value: {
+    fontSize: 13,
     color: "#333",
-    fontWeight: "600",
-    flex: 1,
+    fontWeight: "500",
     textAlign: "right",
-  },
-  editInput: {
     flex: 1,
-    textAlign: "right",
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "600",
-    borderBottomWidth: 1,
-    borderBottomColor: "#007bff",
-    paddingVertical: 4,
+    marginLeft: 16,
   },
   statusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     flex: 1,
-    alignItems: "flex-end",
+    justifyContent: "flex-end",
   },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
+  status: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   verified: {
     color: "#28a745",
   },
   unverified: {
-    color: "#dc3545",
+    color: "#ffc107",
   },
-  actionsSection: {
-    gap: 15,
-  },
-  editActions: {
-    flexDirection: "row",
+  actions: {
     gap: 12,
   },
-  editButton: {
-    backgroundColor: "#007bff",
-    borderRadius: 12,
-    padding: 18,
+  editProfileBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#007bff",
   },
-  editButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  editProfileText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#007bff",
   },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 12,
-    padding: 18,
+  verifyBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#ffc107",
   },
-  cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "600",
+  verifyText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#ffc107",
   },
-  saveButton: {
-    flex: 1,
-    backgroundColor: "#28a745",
-    borderRadius: 12,
-    padding: 18,
+  checkBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#007bff",
   },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  checkText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#007bff",
   },
-  verifyButton: {
-    backgroundColor: "#ffc107",
-    borderRadius: 12,
-    padding: 18,
+  signOutBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#dc3545",
   },
-  verifyButtonText: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  signOutButton: {
-    backgroundColor: "#dc3545",
-    borderRadius: 12,
-    padding: 18,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  signOutButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  disabledButton: {
-    backgroundColor: "#ccc",
+  signOutText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#dc3545",
   },
 });
