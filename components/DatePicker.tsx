@@ -10,6 +10,7 @@ interface DatePickerProps {
   onDateSelect: (date: string) => void;
   label?: string;
   placeholder?: string;
+  editable?: boolean;
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -17,10 +18,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   onDateSelect,
   label = "Data",
   placeholder = "Selecionar data",
+  editable = true,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
-  const openDatePicker = () => setModalVisible(true);
+  const openDatePicker = () => {
+    if (editable) {
+      setModalVisible(true);
+    }
+  };
+
   const closeDatePicker = () => setModalVisible(false);
 
   const handleDateSelect = (day: any) => {
@@ -75,8 +82,14 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       <ThemedView style={styles.container}>
         <ThemedText type="defaultSemiBold">{label}</ThemedText>
 
-        <TouchableOpacity style={styles.dateButton} onPress={openDatePicker}>
-          <ThemedText style={styles.dateText}>
+        <TouchableOpacity
+          style={[styles.dateButton, !editable && styles.dateButtonDisabled]}
+          onPress={openDatePicker}
+          disabled={!editable}
+        >
+          <ThemedText
+            style={[styles.dateText, !editable && styles.dateTextDisabled]}
+          >
             {selectedDate ? formatDisplayDate(selectedDate) : placeholder}
           </ThemedText>
         </TouchableOpacity>
@@ -151,10 +164,18 @@ const styles = StyleSheet.create({
     minHeight: 50,
     justifyContent: "center",
   },
+  dateButtonDisabled: {
+    backgroundColor: "#f8f9fa",
+    borderColor: "#e9ecef",
+    opacity: 0.6,
+  },
   dateText: {
     fontSize: 16,
     color: "#2d3748",
     textAlign: "center",
+  },
+  dateTextDisabled: {
+    color: "#6c757d",
   },
   modalOverlay: {
     flex: 1,

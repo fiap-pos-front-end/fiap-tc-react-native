@@ -1,4 +1,5 @@
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { DatePicker } from "@/components/DatePicker";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCategories } from "@/contexts/CategoryContext";
@@ -48,6 +49,22 @@ export default function EditTransferScreen() {
     }
   }, [id, getTransferById]);
 
+  const handlePriceChange = (text: string) => {
+    const formatted = formatPrice(text);
+    setAmount(formatted);
+  };
+  const formatPrice = (text: string) => {
+    const numericValue = text.replace(/\D/g, "");
+
+    if (numericValue === "") return "";
+
+    const value = parseInt(numericValue, 10) / 100;
+
+    return value.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
   const handleSave = async () => {
     if (!description.trim()) {
       Alert.alert("Erro", "Por favor, insira uma descrição");
@@ -119,7 +136,7 @@ export default function EditTransferScreen() {
               <TextInput
                 style={styles.input}
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={handlePriceChange}
                 placeholder="0,00"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
@@ -181,12 +198,11 @@ export default function EditTransferScreen() {
 
             <ThemedView style={styles.inputGroup}>
               <ThemedText style={styles.label}>Data</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
+              <DatePicker
+                selectedDate={date}
+                onDateSelect={setDate}
+                label="Data da Transferência"
+                placeholder="Selecionar data"
                 editable={!loading}
               />
             </ThemedView>

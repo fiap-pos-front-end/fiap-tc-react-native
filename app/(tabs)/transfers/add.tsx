@@ -1,4 +1,5 @@
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { DatePicker } from "@/components/DatePicker";
 import { SimpleFilePicker } from "@/components/SimpleFilePicker";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -71,6 +72,22 @@ export default function AddTransferScreen() {
       Alert.alert("Erro", "Falha ao criar transferência");
     }
   };
+  const formatPrice = (text: string) => {
+    const numericValue = text.replace(/\D/g, "");
+
+    if (numericValue === "") return "";
+
+    const value = parseInt(numericValue, 10) / 100;
+
+    return value.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+  const handlePriceChange = (text: string) => {
+    const formatted = formatPrice(text);
+    setAmount(formatted);
+  };
 
   const handleImageSelected = (imageUri: string) => {
     setSelectedImages((prev) => [...prev, imageUri]);
@@ -105,7 +122,7 @@ export default function AddTransferScreen() {
               <TextInput
                 style={styles.input}
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={handlePriceChange}
                 placeholder="0,00"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
@@ -167,12 +184,11 @@ export default function AddTransferScreen() {
 
             <ThemedView style={styles.inputGroup}>
               <ThemedText style={styles.label}>Data</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
+              <DatePicker
+                selectedDate={date}
+                onDateSelect={setDate}
+                label="Data da Transferência"
+                placeholder="Selecionar data"
                 editable={!loading}
               />
             </ThemedView>
