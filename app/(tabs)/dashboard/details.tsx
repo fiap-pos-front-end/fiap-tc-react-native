@@ -59,7 +59,7 @@ export default function DashboardDetailsScreen() {
 
               <ThemedView style={styles.circleWrapper}>
                 <ThemedText style={styles.circleTitle}>Total em Receita</ThemedText>
-                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 15 }]}>
+                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
                     {formatCurrency(dashboardData.totalIncome)}
                   </ThemedText>
@@ -68,7 +68,7 @@ export default function DashboardDetailsScreen() {
   
               <ThemedView style={styles.circleWrapper}>
                 <ThemedText style={styles.circleTitle}>Total em Despesas</ThemedText>
-                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 15}]}>
+                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
                     {formatCurrency(dashboardData.totalExpense)}
                   </ThemedText>
@@ -77,7 +77,7 @@ export default function DashboardDetailsScreen() {
 
               <ThemedView style={styles.circleWrapper}>
                 <ThemedText style={styles.circleTitle}>Maior receita</ThemedText>
-                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 15}]}>
+                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
                     {formatCurrency(dashboardData.topIncomeCategory[0].amount)}
                   </ThemedText>
@@ -90,13 +90,15 @@ export default function DashboardDetailsScreen() {
 
               <ThemedView style={styles.circleWrapper}>
                 <ThemedText style={styles.circleTitle}>Maior Despesa</ThemedText>
-                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 15}]}>
+                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
                     {formatCurrency(dashboardData.topExpenseCategory[0].amount)}
                   </ThemedText>
                 </ThemedView>
-                <ThemedText>{dashboardData.topExpenseCategory[0].categoryName}</ThemedText>
-                <ThemedText>{dashboardData.topExpenseCategory[0].icon}</ThemedText>
+                <ThemedText style={styles.circleTitle}>
+                  <ThemedText>{dashboardData.topExpenseCategory[0].categoryName}</ThemedText>
+                  <ThemedText>{dashboardData.topExpenseCategory[0].icon}</ThemedText>
+                </ThemedText>
               </ThemedView>
             </ThemedView>
           </ThemedView>
@@ -358,7 +360,7 @@ circleGrid: {
   flexDirection: "row",
   flexWrap: "wrap",
   justifyContent: "space-between",
-  gap: 20,
+  gap: 23,
 },
 
 circleWrapper: {
@@ -366,9 +368,9 @@ circleWrapper: {
   width: "45%",
 },
 circleCard: {
-  width: 120,
-  height: 120,
-  borderRadius: 60,
+  width: 150,
+  height: 150,
+  borderRadius: 100,
   borderWidth: 3,
   backgroundColor: "#fff",
   alignItems: "center",

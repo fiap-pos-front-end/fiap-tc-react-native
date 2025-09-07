@@ -15,11 +15,7 @@ export const calculations = {
     });
   },
 
-  getTransfersByMonth(
-    transfers: Transfer[],
-    month?: number, // 0 = Janeiro, 11 = Dezembro
-    year?: number
-  ): Transfer[] {
+  getTransfersByMonth(transfers: Transfer[], month?: number, year?: number): Transfer[] {
     const now = new Date();
     const targetMonth = month ?? now.getMonth();
     const targetYear = year ?? now.getFullYear();
@@ -140,11 +136,7 @@ export const calculations = {
     return Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
   },
 
-  getTopIncomeCategoryAllTime(
-    transfers: Transfer[],
-    categories: Category[]
-  ): { categoryName: string; amount: number; icon: string }[] {
-    // Filtra apenas INCOME (todos os períodos)
+  getTopIncomeCategoryAllTime(transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string }[] {
     const incomeTransfers = transfers.filter(
       (transfer) => transfer.type === TransactionType.INCOME
     );
@@ -171,10 +163,9 @@ export const calculations = {
     });
 
     if (categoryMap.size === 0) {
-      return []; // sem incomes
+      return [];
     }
 
-    // encontra a categoria com maior amount
     const topCategory = Array.from(categoryMap.values()).reduce((max, current) =>
       current.amount > max.amount ? current : max
     );
@@ -182,11 +173,7 @@ export const calculations = {
     return [topCategory];
   },
 
-  getTopExpenseCategoryAllTime(
-    transfers: Transfer[],
-    categories: Category[]
-  ): { categoryName: string; amount: number; icon: string }[] {
-    // Filtra apenas INCOME (todos os períodos)
+  getTopExpenseCategoryAllTime( transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string }[] {
     const incomeTransfers = transfers.filter(
       (transfer) => transfer.type === TransactionType.EXPENSE
     );
@@ -213,10 +200,9 @@ export const calculations = {
     });
 
     if (categoryMap.size === 0) {
-      return []; // sem incomes
+      return [];
     }
 
-    // encontra a categoria com maior amount
     const topCategory = Array.from(categoryMap.values()).reduce((max, current) =>
       current.amount > max.amount ? current : max
     );
