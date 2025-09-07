@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useDashboard } from "@/contexts/DashboardContext";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { DashboardSkeleton } from "@/app/(tabs)/dashboard/skeleton";
 
@@ -20,8 +20,11 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { dashboardData, loading, error } = useDashboard();
   const [showBalance, setShowBalance] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const { getUserName } = useAuthContext();
+
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(0.5)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   const toggleBalance = () => {
     Animated.timing(fadeAnim, {
@@ -37,6 +40,21 @@ export default function DashboardScreen() {
       }).start();
     });
   };
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -64,7 +82,7 @@ export default function DashboardScreen() {
       <ThemedView style={styles.content}>
         <ThemedView style={styles.header}>
           <ThemedText style={styles.subtitle}>
-            Olá {getUserName() ?? "Usuário"}, bem vindo(a) de volta
+            Olá {getUserName() ?? "Usuário"}, seja bem vindo(a) de volta
           </ThemedText>
         </ThemedView>
 
@@ -95,19 +113,20 @@ export default function DashboardScreen() {
             </Animated.View>
           </ThemedView>
 
-          <ThemedView style={styles.card}>
+          <Animated.View style={[styles.card,{transform: [{ scale }],opacity,}]}>
             <ThemedText style={styles.cardLabel}>Receitas do Mês</ThemedText>
             <ThemedText style={[styles.income, styles.cardValue]}>
               {formatCurrency(dashboardData.monthlyIncome)}
             </ThemedText>
-          </ThemedView>
+          </Animated.View>
 
-          <ThemedView style={styles.card}>
+          <Animated.View style={[styles.card, { transform: [{ scale }],opacity,}]}
+          >
             <ThemedText style={styles.cardLabel}>Despesas do Mês</ThemedText>
             <ThemedText style={[styles.expense, styles.cardValue]}>
               {formatCurrency(dashboardData.monthlyExpense)}
             </ThemedText>
-          </ThemedView>
+          </Animated.View>
 
           <TouchableOpacity
             style={styles.button}
@@ -122,7 +141,7 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+ container: {
     flex: 1,
     backgroundColor: "#fff",
   },

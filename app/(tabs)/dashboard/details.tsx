@@ -53,6 +53,54 @@ export default function DashboardDetailsScreen() {
             </ThemedText>
           </ThemedView>
 
+          <ThemedView style={styles.summary}>
+            <ThemedText style={styles.summaryTitle}>Todas transações</ThemedText>
+            <ThemedView style={styles.circleGrid}>
+
+              <ThemedView style={styles.circleWrapper}>
+                <ThemedText style={styles.circleTitle}>Total em Receita</ThemedText>
+                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 15 }]}>
+                  <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
+                    {formatCurrency(dashboardData.totalIncome)}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+  
+              <ThemedView style={styles.circleWrapper}>
+                <ThemedText style={styles.circleTitle}>Total em Despesas</ThemedText>
+                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 15}]}>
+                  <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
+                    {formatCurrency(dashboardData.totalExpense)}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+
+              <ThemedView style={styles.circleWrapper}>
+                <ThemedText style={styles.circleTitle}>Maior receita</ThemedText>
+                <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 15}]}>
+                  <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
+                    {formatCurrency(dashboardData.topIncomeCategory[0].amount)}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedText style={styles.circleTitle}>
+                  <ThemedText>{dashboardData.topIncomeCategory[0].categoryName}</ThemedText>
+                  <ThemedText>{dashboardData.topIncomeCategory[0].icon}</ThemedText>
+                </ThemedText>
+              </ThemedView>
+
+              <ThemedView style={styles.circleWrapper}>
+                <ThemedText style={styles.circleTitle}>Maior Despesa</ThemedText>
+                <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 15}]}>
+                  <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
+                    {formatCurrency(dashboardData.topExpenseCategory[0].amount)}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedText>{dashboardData.topExpenseCategory[0].categoryName}</ThemedText>
+                <ThemedText>{dashboardData.topExpenseCategory[0].icon}</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>
               Receitas por Categoria
@@ -115,29 +163,7 @@ export default function DashboardDetailsScreen() {
             )}
           </ThemedView>
 
-          <ThemedView style={styles.summary}>
-            <ThemedText style={styles.summaryTitle}>Resumo do Mês</ThemedText>
-            <ThemedView style={styles.summaryRow}>
-              <ThemedText style={styles.summaryLabel}>Receitas:</ThemedText>
-              <ThemedText style={styles.summaryIncome}>
-                {formatCurrency(dashboardData.monthlyIncome)}
-              </ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.summaryRow}>
-              <ThemedText style={styles.summaryLabel}>Despesas:</ThemedText>
-              <ThemedText style={styles.summaryExpense}>
-                {formatCurrency(dashboardData.monthlyExpense)}
-              </ThemedText>
-            </ThemedView>
-            <ThemedView style={[styles.summaryRow, styles.summaryTotal]}>
-              <ThemedText style={styles.summaryTotalLabel}>
-                Economia:
-              </ThemedText>
-              <ThemedText style={styles.savings}>
-                {formatCurrency(dashboardData.savings)}
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
+          
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -310,4 +336,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
+rowCards: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  gap: 16
+},
+smallCard: {
+  flex: 1,
+  paddingVertical: 20,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 2,
+  backgroundColor: "#fff",
+},
+smallCardText: {
+  fontSize: 20,
+  fontWeight: "bold",
+},
+circleGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  gap: 20,
+},
+
+circleWrapper: {
+  alignItems: "center",
+  width: "45%",
+},
+circleCard: {
+  width: 120,
+  height: 120,
+  borderRadius: 60,
+  borderWidth: 3,
+  backgroundColor: "#fff",
+  alignItems: "center",
+  justifyContent: "center",
+},
+circleText: {
+  fontSize: 18,
+  fontWeight: "bold",
+  textAlign: "center",
+},
+circleTitle: {
+  marginTop: 8,
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#333",
+  textAlign: "center",
+},
+column: {
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent:'center',
+  backgroundColor: 'transparent',
+  alignItems: 'center',
+  gap: 1,
+},
+
 });

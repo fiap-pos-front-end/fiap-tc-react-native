@@ -26,7 +26,11 @@ export interface DashboardData {
   currentBalance: number;
   monthlyIncome: number;
   monthlyExpense: number;
+  totalExpense: number;
+  totalIncome: number;
   savings: number;
   incomeByCategory: { categoryName: string; amount: number; icon: string }[];
+  topIncomeCategory: { categoryName: string; amount: number; icon: string }[];
+  topExpenseCategory: { categoryName: string; amount: number; icon: string }[];
   expenseByCategory: { categoryName: string; amount: number; icon: string }[];
 }
