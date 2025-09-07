@@ -4,27 +4,42 @@ import {
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
+  View,
+  Animated
 } from "react-native";
-
+import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { useState, useRef } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { DashboardSkeleton } from "@/app/(tabs)/dashboard/skeleton";
+
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { dashboardData, loading, error } = useDashboard();
+  const [showBalance, setShowBalance] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const { getUserName } = useAuthContext();
+
+  const toggleBalance = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowBalance((prev) => !prev);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ThemedView style={styles.centeredContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-          <ThemedText style={styles.loadingText}>
-            Carregando dashboard...
-          </ThemedText>
-        </ThemedView>
-      </SafeAreaView>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error) {
@@ -48,18 +63,36 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container}>
       <ThemedView style={styles.content}>
         <ThemedView style={styles.header}>
-          <ThemedText style={styles.title}>Dashboard</ThemedText>
           <ThemedText style={styles.subtitle}>
-            Visão geral das suas finanças
+            Olá {getUserName() ?? "Usuário"}, bem vindo(a) de volta
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.cardsContainer}>
-          <ThemedView style={styles.card}>
-            <ThemedText style={styles.cardLabel}>Saldo Atual</ThemedText>
-            <ThemedText style={[styles.balance, styles.cardValue]}>
-              {formatCurrency(dashboardData.currentBalance)}
-            </ThemedText>
+          <ThemedView style={styles.balanceCard}>
+            <View style={styles.balanceHeader}>
+              <ThemedText style={styles.balanceLabel}>Saldo Atual</ThemedText>
+              <TouchableOpacity onPress={toggleBalance}>
+                <Ionicons
+                  name={showBalance ? "eye-off" : "eye"}
+                  size={22}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <Animated.View style={{ opacity: fadeAnim }}>
+              <ThemedText
+                style={[
+                  styles.balanceValue,
+                  !showBalance && styles.hiddenBalance,
+                ]}
+              >
+                {showBalance
+                  ? formatCurrency(dashboardData.currentBalance)
+                  : "* * * *"}
+              </ThemedText>
+            </Animated.View>
           </ThemedView>
 
           <ThemedView style={styles.card}>
@@ -197,5 +230,36 @@ const styles = StyleSheet.create({
     color: "#007bff",
     fontSize: 16,
     fontWeight: "500",
+  },
+  balanceCard: {
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: "#004A85",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  balanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  balanceLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  balanceValue: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    minWidth: 160,
+    textAlign: "left",
+  },
+  hiddenBalance: {
+    letterSpacing: 5,
   },
 });
