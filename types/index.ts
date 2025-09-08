@@ -33,4 +33,5 @@ export interface DashboardData {
   topIncomeCategory: { categoryName: string; amount: number; icon: string }[];
   topExpenseCategory: { categoryName: string; amount: number; icon: string }[];
   expenseByCategory: { categoryName: string; amount: number; icon: string }[];
+  getByCategory: { categoryName: string; expense: number; icon: string; income:number }[];
 }

@@ -210,6 +210,43 @@ export const calculations = {
     return [topCategory];
   },
 
+  getByCategory(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; icon: string; expense: number; income: number }[] {
+    const currentMonthTransfers = this.getCurrentMonthTransfers(transfers);
+    const categoryMap = new Map<
+      string,
+      { categoryName: string; icon: string; expense: number; income: number }
+    >();
+
+    currentMonthTransfers.forEach((transfer) => {
+      const category = categories.find((cat) => cat.id === transfer.categoryId);
+      if (!category) return;
+
+      const existing = categoryMap.get(category.id);
+
+      if (existing) {
+        if (transfer.type === TransactionType.EXPENSE) {
+          existing.expense += transfer.amount;
+        } else if (transfer.type === TransactionType.INCOME) {
+          existing.income += transfer.amount;
+        }
+      } else {
+        categoryMap.set(category.id, {
+          categoryName: category.name,
+          icon: category.icon,
+          expense: transfer.type === TransactionType.EXPENSE ? transfer.amount : 0,
+          income: transfer.type === TransactionType.INCOME ? transfer.amount : 0,
+        });
+      }
+    });
+
+    return Array.from(categoryMap.values()).sort(
+      (a, b) => b.expense + b.income - (a.expense + a.income)
+    );
+  },
+
   calculateDashboardData(
     transfers: Transfer[],
     categories: Category[]
@@ -232,6 +269,7 @@ export const calculations = {
       topExpenseCategory: this.getTopExpenseCategoryAllTime(transfers, categories),
       incomeByCategory: this.getIncomeByCategory(transfers, categories),
       expenseByCategory: this.getExpenseByCategory(transfers, categories),
+      getByCategory: this.getByCategory(transfers, categories),
     };
   },
 };
