@@ -35,6 +35,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     savings: 0,
     incomeByCategory: [],
     expenseByCategory: [],
+    topIncomeCategory: [],
+    getByCategory: [],
+    getMonthlyIncomeExpense: [],
+    topExpenseCategory: [],
+    totalExpense: 0,
+    totalIncome: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

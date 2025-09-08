@@ -36,6 +36,7 @@ interface AuthContextType {
     newDisplayName: string
   ) => Promise<{ success: boolean; error?: string }>;
   isAuthenticated: boolean;
+  getUserName: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,8 +44,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const authData = useAuth();
 
+  const getUserName = () => {
+    return authData.user?.displayName ?? null;
+  };
+
   return (
-    <AuthContext.Provider value={authData}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...authData, getUserName }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

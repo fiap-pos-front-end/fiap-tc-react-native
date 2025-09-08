@@ -23,8 +23,8 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      foregroundImage: "./assets/images/icon.png",
+      backgroundColor: "#0092EA",
     },
     edgeToEdgeEnabled: true,
     package: "br.com.bytebank",
@@ -42,7 +42,7 @@ const config: ExpoConfig = {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#0092EA",
       },
     ],
   ],
