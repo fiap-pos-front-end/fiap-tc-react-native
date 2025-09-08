@@ -55,9 +55,7 @@ export default function AddCategoryScreen() {
         icon: selectedIcon,
       });
 
-      Alert.alert("Sucesso", "Categoria criada!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.back();
     } catch (error) {
       Alert.alert("Erro", "Falha ao criar categoria");
     }

@@ -92,9 +92,7 @@ export default function AddTransferScreen() {
         }
       }
 
-      Alert.alert("Sucesso", "Transferência criada!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.back();
     } catch (error) {
       console.error("Erro ao criar transferência:", error);
       Alert.alert("Erro", "Falha ao criar transferência");
