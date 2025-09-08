@@ -210,6 +210,50 @@ export const calculations = {
     return [topCategory];
   },
 
+  getMonthlyIncomeExpense(
+    transfers: Transfer[]
+  ): { month: string; year: number; income: number; expense: number }[] {
+    const monthOrder = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const map = new Map<string, { month: string; year: number; income: number; expense: number }>();
+
+    if (transfers.length === 0) {
+      const currentYear = new Date().getFullYear();
+      return monthOrder.map(month => ({ month, year: currentYear, income: 0, expense: 0 }));
+    }
+
+    const years = transfers.map(t => new Date(t.date).getFullYear());
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+
+    for (let year = minYear; year <= maxYear; year++) {
+      monthOrder.forEach(month => {
+        const key = `${year}-${month}`;
+        map.set(key, { month, year, income: 0, expense: 0 });
+      });
+    }
+
+    transfers.forEach(transfer => {
+      const date = new Date(transfer.date);
+      const monthIndex = date.getMonth();
+      const monthStr = monthOrder[monthIndex];
+      const year = date.getFullYear();
+      const key = `${year}-${monthStr}`;
+      const record = map.get(key)!;
+
+      if (transfer.type === TransactionType.INCOME) {
+        record.income += transfer.amount;
+      } else if (transfer.type === TransactionType.EXPENSE) {
+        record.expense += transfer.amount;
+      }
+    });
+
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+    });
+  },
+
   getByCategory(
     transfers: Transfer[],
     categories: Category[]
@@ -270,6 +314,7 @@ export const calculations = {
       incomeByCategory: this.getIncomeByCategory(transfers, categories),
       expenseByCategory: this.getExpenseByCategory(transfers, categories),
       getByCategory: this.getByCategory(transfers, categories),
+      getMonthlyIncomeExpense: this.getMonthlyIncomeExpense(transfers),
     };
   },
 };

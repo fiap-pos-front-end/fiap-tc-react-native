@@ -73,6 +73,8 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
+  Animated.sequence([
+    Animated.delay(400),
     Animated.parallel([
       Animated.spring(scale, {
         toValue: 1,
@@ -84,8 +86,9 @@ export default function DashboardScreen() {
         duration: 400,
         useNativeDriver: true,
       }),
-    ]).start();
-  }, []);
+    ]),
+  ]).start();
+}, []);
 
   if (loading) {
     return <DashboardSkeleton />;

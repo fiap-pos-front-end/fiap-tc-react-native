@@ -36,6 +36,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     incomeByCategory: [],
     expenseByCategory: [],
     topIncomeCategory: [],
+    getByCategory: [],
+    getMonthlyIncomeExpense: [],
     topExpenseCategory: [],
     totalExpense: 0,
     totalIncome: 0,

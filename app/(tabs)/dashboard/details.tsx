@@ -3,7 +3,16 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  View, 
+  Text, 
+  Dimensions,
 } from "react-native";
+import React from "react";
+import {
+  LineChart,
+  BarChart,
+  PieChart,
+} from "react-native-chart-kit";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -11,6 +20,23 @@ import { useDashboard } from "@/contexts/DashboardContext";
 
 export default function DashboardDetailsScreen() {
   const { dashboardData, loading, error } = useDashboard();
+  const screenWidth = Dimensions.get("window").width;
+
+  const dataLine = {
+    labels: dashboardData.getMonthlyIncomeExpense.map((item) => item.month),
+    datasets: [
+      {
+        data: dashboardData.getMonthlyIncomeExpense.map((item) => item.income),
+        color: () => "#4CAF50",
+        strokeWidth: 2,
+      },
+      {
+        data: dashboardData.getMonthlyIncomeExpense.map((item) => item.expense),
+        color: () => "#F44336",
+        strokeWidth: 2,
+      },
+    ],
+  };
 
   if (loading) {
     return (
@@ -103,7 +129,7 @@ export default function DashboardDetailsScreen() {
             </ThemedView>
           </ThemedView>
 
-          <ThemedView style={styles.section}>
+          {/* <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>
               Receitas por Categoria
             </ThemedText>
@@ -163,9 +189,28 @@ export default function DashboardDetailsScreen() {
                 </ThemedText>
               </ThemedView>
             )}
+          </ThemedView> */}
+
+          <ThemedView style={[styles.card]} >
+            <ThemedText style={{ textAlign: "center", fontSize: 20, marginVertical: 10 }}>
+              Análise de Movimentações Anual
+            </ThemedText>
+            <LineChart
+              data={dataLine}
+              width={screenWidth - 50}
+              height={240}
+              chartConfig={{
+                backgroundColor: "#ffff",
+                backgroundGradientFrom: "#ffff",
+                backgroundGradientTo: "#ffff",
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+              }}
+              bezier
+              style={{ marginVertical: 8, borderRadius: 16 }}
+            />
           </ThemedView>
 
-          
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -266,6 +311,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom:10,
   },
   summaryTitle: {
     fontSize: 18,
@@ -338,63 +384,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
-rowCards: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  gap: 16
-},
-smallCard: {
-  flex: 1,
-  paddingVertical: 20,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 2,
-  backgroundColor: "#fff",
-},
-smallCardText: {
-  fontSize: 20,
-  fontWeight: "bold",
-},
-circleGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "space-between",
-  gap: 23,
-},
-
-circleWrapper: {
-  alignItems: "center",
-  width: "45%",
-},
-circleCard: {
-  width: 150,
-  height: 150,
-  borderRadius: 100,
-  borderWidth: 3,
-  backgroundColor: "#fff",
-  alignItems: "center",
-  justifyContent: "center",
-},
-circleText: {
-  fontSize: 18,
-  fontWeight: "bold",
-  textAlign: "center",
-},
-circleTitle: {
-  marginTop: 8,
-  fontSize: 14,
-  fontWeight: "600",
-  color: "#333",
-  textAlign: "center",
-},
-column: {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent:'center',
-  backgroundColor: 'transparent',
-  alignItems: 'center',
-  gap: 1,
-},
+  rowCards: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 16
+  },
+  smallCard: {
+    flex: 1,
+    paddingVertical: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    backgroundColor: "#fff",
+  },
+  smallCardText: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  circleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 23,
+  },
+  circleWrapper: {
+    alignItems: "center",
+    width: "45%",
+  },
+  circleCard: {
+    width: 150,
+    height: 150,
+    borderRadius: 100,
+    borderWidth: 3,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circleText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  circleTitle: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+  column: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent:'center',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    gap: 1,
+  },
+  card: {
+    padding: 15,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom:10,
+  },
 
 });
