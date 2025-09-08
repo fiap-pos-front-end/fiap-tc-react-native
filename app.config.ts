@@ -20,6 +20,7 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
+    bundleIdentifier: 'br.com.bytebank',
   },
   android: {
     adaptiveIcon: {
