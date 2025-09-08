@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import {
-  ActivityIndicator,
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
@@ -74,21 +73,21 @@ export default function DashboardScreen() {
 
   useEffect(() => {
   Animated.sequence([
-    Animated.delay(400),
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1,
-        friction: 6,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]),
-  ]).start();
-}, []);
+      Animated.delay(400),
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
 
   if (loading) {
     return <DashboardSkeleton />;
