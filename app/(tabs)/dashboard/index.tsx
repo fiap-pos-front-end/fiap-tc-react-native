@@ -30,7 +30,6 @@ export default function DashboardScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scale = useRef(new Animated.Value(0.5)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const screenWidth = Dimensions.get("window").width;
 
  const dataStackedBar = {
     labels: dashboardData.getByCategory.map(
@@ -115,7 +114,7 @@ export default function DashboardScreen() {
       <ScrollView>
           <ThemedView style={styles.content}>
             <ThemedView style={styles.header}>
-              <ThemedText style={styles.subtitle}>
+              <ThemedText style={styles.title}>
                 Olá {getUserName() ?? "Usuário"}, seja bem vindo(a) de volta
               </ThemedText>
             </ThemedView>
@@ -150,77 +149,93 @@ export default function DashboardScreen() {
                 <Animated.View style={[styles.card,{transform: [{ scale }],opacity: opacity,}]}>
                   <ThemedText style={styles.cardLabel}>Balanço do Mês</ThemedText>
                   <ThemedView style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
-                    <PieChart
-                      data={dataPie}
-                      width={screenWidth * 0.5}
-                      height={220}
-                      accessor="population"
-                      backgroundColor="transparent"
-                      paddingLeft='45'
-                      chartConfig={{
-                        color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                      }}
-                      absolute
-                      hasLegend={false}
-                    />
+                    {dashboardData?.monthlyExpense ? (
+                      <>
+                        <PieChart
+                          data={dataPie}
+                          width={200}
+                          height={220}
+                          accessor="population"
+                          backgroundColor="transparent"
+                          paddingLeft="45"
+                          chartConfig={{
+                            color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+                          }}
+                          absolute
+                          hasLegend={false}
+                        />
 
-                    <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
-                      {dataPie.map((item, index) => (
-                        <ThemedView
-                          key={index}
-                          style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
-                        >
-                          <View
-                            style={{
-                              width: 14,
-                              height: 14,
-                              borderRadius: 8,
-                              backgroundColor: item.color,
-                              marginRight: 8,
-                            }}
-                          />
-                          <ThemedText> {`${item.name}:\n ${formatCurrency(item.population)}`} </ThemedText>
+                        <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
+                          {dataPie.map((item, index) => (
+                            <ThemedView
+                              key={index}
+                              style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+                            >
+                              <View
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 8,
+                                  backgroundColor: item.color,
+                                  marginRight: 8,
+                                }}
+                              />
+                              <ThemedText>{`${item.name}:\n ${formatCurrency(item.population)}`}</ThemedText>
+                            </ThemedView>
+                          ))}
                         </ThemedView>
-                      ))}
-                    </ThemedView>
+                      </>
+                    ) : (
+                      <ThemedText style={{ textAlign: "center", flex: 1 }}>Sem dados mensais disponíveis</ThemedText>
+                    )}
                   </ThemedView>
                 </Animated.View>
 
-                <Animated.View style={[styles.card, { transform: [{ scale }], opacity: opacity,}]}
-                >
+                <Animated.View style={[styles.card, { transform: [{ scale }], opacity: opacity,}]}>
                   <ThemedText style={styles.cardLabel}>Comparativo por Categoria Mensal</ThemedText>
-                  <StackedBarChart
-                    style={{ marginVertical: 8, padding: 0}}
-                    data={dataStackedBar}
-                    width={screenWidth - 100}
-                    height={250}
-                    chartConfig={{
-                      backgroundColor: "#ffffff",
-                      backgroundGradientFrom: "#ffffff",
-                      backgroundGradientTo: "#ffffff",
-                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    }}
-                   hideLegend={true}
-                   fromZero
-                   yLabelsOffset={1}
-                  />
-                  <ThemedView style={{  flexDirection: "row", gap:50, marginLeft: 10, flex: 1, justifyContent: "center" }}>
-                      {dataPie.map((item, index) => (
-                        <ThemedView key={index}style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                          <View
-                            style={{
-                              width: 14,
-                              height: 14,
-                              borderRadius: 8,
-                              backgroundColor: item.color,
-                              marginRight: 8,
-                            }}
-                          />
-                          <ThemedText> {`${item.name}`} </ThemedText>
-                        </ThemedView>
-                      ))}
-                    </ThemedView>
+                  {dashboardData.getByCategory?.length ? (
+                    <>
+                      <StackedBarChart
+                        style={{ marginVertical: 8, padding: 0 }}
+                        data={dataStackedBar}
+                        width={350}
+                        height={250}
+                        chartConfig={{
+                          backgroundColor: "#ffffff",
+                          backgroundGradientFrom: "#ffffff",
+                          backgroundGradientTo: "#ffffff",
+                          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                        }}
+                        hideLegend={true}
+                        fromZero
+                        yLabelsOffset={1}
+                      />
+
+                      <ThemedView style={{ flexDirection: "row", gap: 50, marginLeft: 10, flex: 1, justifyContent: "center" }}>
+                        {dataPie.map((item, index) => (
+                          <ThemedView
+                            key={index}
+                            style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+                          >
+                            <View
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 8,
+                                backgroundColor: item.color,
+                                marginRight: 8,
+                              }}
+                            />
+                            <ThemedText>{`${item.name}`}</ThemedText>
+                          </ThemedView>
+                        ))}
+                      </ThemedView>
+                    </>
+                  ) : (
+                    <ThemedText style={{ textAlign: "center", marginTop: 20 }}>Sem dados mensais disponíveis</ThemedText>
+                  )}
+
                 </Animated.View>
 
                 <TouchableOpacity
@@ -256,15 +271,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
     color: "#666",
     textAlign: "center",
+    marginBottom: 8,
   },
   cardsContainer: {
     flex: 1,

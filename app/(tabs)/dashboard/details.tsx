@@ -11,7 +11,6 @@ import {
 import React, { useState, useRef, useEffect } from "react";
 import {
   LineChart,
-  StackedBarChart,
   PieChart,
 } from "react-native-chart-kit";
 
@@ -29,7 +28,6 @@ const months = [
 
 export default function DashboardDetailsScreen() {
   const { dashboardData, loading, error } = useDashboard();
-  const screenWidth = Dimensions.get("window").width;
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
@@ -53,17 +51,6 @@ export default function DashboardDetailsScreen() {
     ],
   };
 
-   const dataStackedBar = {
-    labels: dashboardData.getByCategory.map(
-      (item) => `${item.icon} ${item.categoryName}`
-    ),
-    legend: [],
-    data: dashboardData.getByCategory.map(
-      (item) => [item.income, item.expense]
-    ),
-    barColors: ["#28a745", "#dc3545"],
-  };
-  
   const dataPie = [
     {
       name: "Despesas",
@@ -162,26 +149,34 @@ export default function DashboardDetailsScreen() {
                 <ThemedText style={styles.circleTitle}>Maior receita</ThemedText>
                 <ThemedView style={[styles.circleCard, { borderColor: "#28a745", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
-                    {formatCurrency(dashboardData.topIncomeCategory[0].amount)}
+                    {dashboardData.topIncomeCategory && dashboardData.topIncomeCategory.length > 0
+                      ? formatCurrency(dashboardData.topIncomeCategory[0].amount)
+                      : 0}
                   </ThemedText>
                 </ThemedView>
-                <ThemedText style={styles.circleTitle}>
-                  <ThemedText>{dashboardData.topIncomeCategory[0].categoryName}</ThemedText>
-                  <ThemedText>{dashboardData.topIncomeCategory[0].icon}</ThemedText>
-                </ThemedText>
+                {dashboardData.topIncomeCategory && dashboardData.topIncomeCategory.length > 0 ? (
+                    <ThemedText style={styles.circleTitle}>
+                      <ThemedText>{dashboardData.topIncomeCategory[0].categoryName}</ThemedText>
+                      <ThemedText>{dashboardData.topIncomeCategory[0].icon}</ThemedText>
+                    </ThemedText>
+                  ) : null}
               </ThemedView>
 
               <ThemedView style={styles.circleWrapper}>
                 <ThemedText style={styles.circleTitle}>Maior Despesa</ThemedText>
                 <ThemedView style={[styles.circleCard, { borderColor: "#dc3545", borderWidth: 12}]}>
                   <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
-                    {formatCurrency(dashboardData.topExpenseCategory[0].amount)}
+                    {dashboardData.topExpenseCategory && dashboardData.topExpenseCategory.length > 0
+                      ? formatCurrency(dashboardData.topExpenseCategory[0].amount)
+                      : 0}
                   </ThemedText>
                 </ThemedView>
-                <ThemedText style={styles.circleTitle}>
-                  <ThemedText>{dashboardData.topExpenseCategory[0].categoryName}</ThemedText>
-                  <ThemedText>{dashboardData.topExpenseCategory[0].icon}</ThemedText>
-                </ThemedText>
+                {dashboardData.topExpenseCategory && dashboardData.topExpenseCategory.length > 0 ? (
+                    <ThemedText style={styles.circleTitle}>
+                      <ThemedText>{dashboardData.topExpenseCategory[0].categoryName}</ThemedText>
+                      <ThemedText>{dashboardData.topExpenseCategory[0].icon}</ThemedText>
+                    </ThemedText>
+                  ) : null}
               </ThemedView>
             </ThemedView>
           </ThemedView>
@@ -192,7 +187,7 @@ export default function DashboardDetailsScreen() {
             </ThemedText>
             <LineChart
               data={dataLine}
-              width={screenWidth - 50}
+              width={360}
               height={240}
               chartConfig={{
                 backgroundColor: "#ffff",
@@ -206,9 +201,10 @@ export default function DashboardDetailsScreen() {
             />
           </ThemedView>
 
-          <ThemedView>
-            <ThemedText style={styles.monthTitle}>
-              Verificação Mensal
+          <ThemedView style={styles.section}>
+            
+            <ThemedText style={styles.sectionTitle}>
+                Balanço Mensal
             </ThemedText>
 
             <View style={styles.wrapper}>
@@ -236,81 +232,52 @@ export default function DashboardDetailsScreen() {
 
             </View>
 
-            <Animated.View style={[styles.card,{transform: [{ scale }],opacity: opacity,}]}>
+            <Animated.View style={[styles.card, {transform: [{ scale }],opacity: opacity,}]}>
               <ThemedText style={styles.cardLabel}>Balanço do Mês</ThemedText>
               <ThemedView style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
-                <PieChart
-                  data={dataPie}
-                  width={screenWidth * 0.5}
-                  height={220}
-                  accessor="population"
-                  backgroundColor="transparent"
-                  paddingLeft='45'
-                  chartConfig={{
-                    color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                  }}
-                  absolute
-                  hasLegend={false}
-                />
-
-                <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
-                  {dataPie.map((item, index) => (
-                    <ThemedView
-                      key={index}
-                      style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
-                    >
-                      <View
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: 8,
-                          backgroundColor: item.color,
-                          marginRight: 8,
+                {dashboardData?.monthlyExpense ? (
+                    <>
+                      <PieChart
+                        data={dataPie}
+                        width={200}
+                        height={220}
+                        accessor="population"
+                        backgroundColor="transparent"
+                        paddingLeft="45"
+                        chartConfig={{
+                          color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
                         }}
+                        absolute
+                        hasLegend={false}
                       />
-                      <ThemedText> {`${item.name}:\n ${formatCurrency(item.population)}`} </ThemedText>
-                    </ThemedView>
-                  ))}
-                </ThemedView>
+
+                      <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
+                        {dataPie.map((item, index) => (
+                          <ThemedView
+                            key={index}
+                            style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+                          >
+                            <View
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 8,
+                                backgroundColor: item.color,
+                                marginRight: 8,
+                              }}
+                            />
+                            <ThemedText>{`${item.name}:\n ${formatCurrency(item.population)}`}</ThemedText>
+                          </ThemedView>
+                        ))}
+                      </ThemedView>
+                    </>
+                  ) : (
+                    <ThemedText style={styles.noData}>
+                      Sem dados mensais disponíveis
+                    </ThemedText>
+                  )}
               </ThemedView>
             </Animated.View>
-
-            {/* <Animated.View style={[styles.card, { transform: [{ scale }], opacity: opacity,}]}
-            >
-              <ThemedText style={styles.cardLabel}>Comparativo por Categoria Mensal</ThemedText>
-              <StackedBarChart
-                style={{ marginVertical: 8, padding: 0}}
-                data={dataStackedBar}
-                width={screenWidth - 100}
-                height={250}
-                chartConfig={{
-                  backgroundColor: "#ffffff",
-                  backgroundGradientFrom: "#ffffff",
-                  backgroundGradientTo: "#ffffff",
-                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                }}
-                hideLegend={true}
-                fromZero
-                yLabelsOffset={1}
-              />
-              <ThemedView style={{  flexDirection: "row", gap:50, marginLeft: 10, flex: 1, justifyContent: "center" }}>
-                  {dataPie.map((item, index) => (
-                    <ThemedView key={index}style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                      <View
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: 8,
-                          backgroundColor: item.color,
-                          marginRight: 8,
-                        }}
-                      />
-                      <ThemedText> {`${item.name}`} </ThemedText>
-                    </ThemedView>
-                  ))}
-                </ThemedView>
-            </Animated.View> */}
 
             <ThemedView style={styles.section}>
               <ThemedText style={styles.sectionTitle}>
@@ -476,7 +443,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom:10,
+    marginBottom:30,
   },
   summaryTitle: {
     fontSize: 18,
@@ -617,10 +584,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom:10,
+    marginBottom:30,
   },
    wrapper: {
-    padding: 16,
+    padding: 1,
   },
   titleText: {
     fontSize: 16,
