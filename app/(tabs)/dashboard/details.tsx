@@ -151,7 +151,7 @@ export default function DashboardDetailsScreen() {
                   <ThemedText style={[styles.circleText, { color: "#28a745" }]}>
                     {dashboardData.topIncomeCategory && dashboardData.topIncomeCategory.length > 0
                       ? formatCurrency(dashboardData.topIncomeCategory[0].amount)
-                      : 0}
+                      : "R$ 0,00"}
                   </ThemedText>
                 </ThemedView>
                 {dashboardData.topIncomeCategory && dashboardData.topIncomeCategory.length > 0 ? (
@@ -168,7 +168,7 @@ export default function DashboardDetailsScreen() {
                   <ThemedText style={[styles.circleText, { color: "#dc3545" }]}>
                     {dashboardData.topExpenseCategory && dashboardData.topExpenseCategory.length > 0
                       ? formatCurrency(dashboardData.topExpenseCategory[0].amount)
-                      : 0}
+                      : "R$ 0,00"}
                   </ThemedText>
                 </ThemedView>
                 {dashboardData.topExpenseCategory && dashboardData.topExpenseCategory.length > 0 ? (
