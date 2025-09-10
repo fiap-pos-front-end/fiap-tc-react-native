@@ -15,6 +15,7 @@ import {
   RefreshControl,
   SafeAreaView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -29,6 +30,7 @@ export default function TransfersListScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Transfer | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setRefreshKey((prev) => prev + 1);
@@ -156,6 +158,10 @@ export default function TransfersListScreen() {
     [router, categories, getCategoryIcon, getCategoryName]
   );
 
+  const filteredTransfers = transfers?.filter((item) =>
+    item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) ?? [];
+
   if (loading && !isRefreshing) {
     return (
       <SafeAreaView style={styles.container}>
@@ -183,7 +189,16 @@ export default function TransfersListScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ThemedView style={styles.container} key={refreshKey}>
-        {!transfers || transfers?.length === 0 ? (
+        <ThemedView style={styles.searchContainer}>
+          <TextInput
+            placeholder="Pesquisar por nome..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+          />
+        </ThemedView>
+
+        {!filteredTransfers || filteredTransfers.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <MaterialCommunityIcons
               name="bank-transfer"
@@ -199,7 +214,7 @@ export default function TransfersListScreen() {
           </ThemedView>
         ) : (
           <FlatList
-            data={transfers}
+            data={filteredTransfers}
             renderItem={renderTransfer}
             keyExtractor={(item) => `${item.id}-${refreshKey}`}
             style={styles.list}
@@ -285,9 +300,22 @@ export default function TransfersListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
     backgroundColor: "#fff",
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   loadingContainer: {
     flex: 1,
