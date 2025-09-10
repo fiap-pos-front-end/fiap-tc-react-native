@@ -5,7 +5,6 @@ import {
   StyleSheet,
   View, 
   Platform,
-  Dimensions,
   Animated
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
@@ -31,27 +30,48 @@ export default function DashboardDetailsScreen() {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-
   const scale = useRef(new Animated.Value(0.5)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  
+  const [incomeByCategory, setIncomeByCategory] = useState(
+    dashboardData.incomeByCategory.map(item => ({
+      name: item.categoryName,
+      amount: item.amount,
+      icon: item.icon,
+    }))
+  );
+
+  const [expenseByCategory, setExpenseByCategory] = useState(
+    dashboardData.expenseByCategory.map(item => ({
+      name: item.categoryName,
+      amount: item.amount,
+      icon: item.icon,
+    }))
+  );
+
+  const monthlyAggregatedMap = new Map<number, { month: string; monthIndex: number; income: number; expense: number }>();
+
+  dashboardData.getMonthlyIncomeExpense.forEach(({ month, monthIndex, income = 0, expense = 0 }) => {
+    const existing = monthlyAggregatedMap.get(monthIndex);
+    if (existing) {
+      existing.income += income;
+      existing.expense += expense;
+    } else {
+      monthlyAggregatedMap.set(monthIndex, { month, monthIndex, income, expense });
+    }
+  });
+
+  const monthlyAggregated = Array.from(monthlyAggregatedMap.values()).sort((a, b) => a.monthIndex - b.monthIndex);
 
   const dataLine = {
-    labels: dashboardData.getMonthlyIncomeExpense.map((item) => item.month),
+    labels: monthlyAggregated.map((m) => m.month),
     datasets: [
-      {
-        data: dashboardData.getMonthlyIncomeExpense.map((item) => item.income),
-        color: () => "#4CAF50",
-        strokeWidth: 2,
-      },
-      {
-        data: dashboardData.getMonthlyIncomeExpense.map((item) => item.expense),
-        color: () => "#F44336",
-        strokeWidth: 2,
-      },
+      { data: monthlyAggregated.map((m) => m.income), color: () => "#4CAF50", strokeWidth: 2 },
+      { data: monthlyAggregated.map((m) => m.expense), color: () => "#F44336", strokeWidth: 2 },
     ],
   };
 
-  const dataPie = [
+  const [dataPie, setDataPie] = useState([
     {
       name: "Despesas",
       population: dashboardData?.monthlyExpense ?? 0,
@@ -62,7 +82,7 @@ export default function DashboardDetailsScreen() {
       population: dashboardData?.monthlyIncome ?? 0,
       color: "#28a745",
     },
-  ];
+  ]);
 
   useEffect(() => {
     Animated.sequence([
@@ -80,7 +100,7 @@ export default function DashboardDetailsScreen() {
           }),
         ]),
       ]).start();
-    }, []);
+  }, []);
 
   if (loading) {
     return (
@@ -110,6 +130,45 @@ export default function DashboardDetailsScreen() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const handleDateChange = (month: number, year: number) => {
+    const entries = dashboardData.getMonthlyIncomeExpense.filter(
+      (item) => item.monthIndex === month && item.year === year
+    );
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    const newIncomeByCategory: typeof incomeByCategory = [];
+    const newExpenseByCategory: typeof expenseByCategory = [];
+
+    entries.forEach((item) => {
+      if (item.income && item.income > 0) {
+        totalIncome += item.income;
+        newIncomeByCategory.push({
+          name: item.categoryName,
+          amount: item.income,
+          icon: item.icon ?? "",
+        });
+      }
+
+      if (item.expense && item.expense > 0) {
+        totalExpense += item.expense;
+        newExpenseByCategory.push({
+          name: item.categoryName,
+          amount: item.expense,
+          icon: item.icon ?? "",
+        });
+      }
+    });
+
+    setDataPie([
+      { ...dataPie[0], population: totalExpense },
+      { ...dataPie[1], population: totalIncome },
+    ]);
+    setIncomeByCategory(newIncomeByCategory);
+    setExpenseByCategory(newExpenseByCategory);
   };
 
   return (
@@ -212,7 +271,10 @@ export default function DashboardDetailsScreen() {
                 <Picker
                   selectedValue={selectedMonth}
                   style={styles.wheel}
-                  onValueChange={(itemValue) => setSelectedMonth(itemValue)}
+                  onValueChange={(newMonth) => {
+                    setSelectedMonth(newMonth);
+                    handleDateChange(newMonth, selectedYear);
+                  }}
                 >
                   {months.map((month, index) => (
                     <Picker.Item key={index} label={month} value={index} />
@@ -222,124 +284,104 @@ export default function DashboardDetailsScreen() {
                 <Picker
                   selectedValue={selectedYear}
                   style={styles.wheel}
-                  onValueChange={(itemValue) => setSelectedYear(itemValue)}
+                  onValueChange={(newYear) => {
+                    setSelectedYear(newYear);
+                    handleDateChange(selectedMonth, newYear);
+                  }}
                 >
                   {years.map((year, index) => (
                     <Picker.Item key={index} label={String(year)} value={year} />
                   ))}
                 </Picker>
               </View>
-
             </View>
+            
+            <ThemedView style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
+              {dataPie[0].population || dataPie[1].population  ? (
+                  <>
+                    <PieChart
+                      data={dataPie}
+                      width={200}
+                      height={220}
+                      accessor="population"
+                      backgroundColor="transparent"
+                      paddingLeft="45"
+                      chartConfig={{
+                        color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+                      }}
+                      absolute
+                      hasLegend={false}
+                    />
 
-            <Animated.View style={[styles.card, {transform: [{ scale }],opacity: opacity,}]}>
-              <ThemedText style={styles.cardLabel}>Balanço do Mês</ThemedText>
-              <ThemedView style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
-                {dashboardData?.monthlyExpense ? (
-                    <>
-                      <PieChart
-                        data={dataPie}
-                        width={200}
-                        height={220}
-                        accessor="population"
-                        backgroundColor="transparent"
-                        paddingLeft="45"
-                        chartConfig={{
-                          color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                        }}
-                        absolute
-                        hasLegend={false}
-                      />
-
-                      <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
-                        {dataPie.map((item, index) => (
-                          <ThemedView
-                            key={index}
-                            style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
-                          >
-                            <View
-                              style={{
-                                width: 14,
-                                height: 14,
-                                borderRadius: 8,
-                                backgroundColor: item.color,
-                                marginRight: 8,
-                              }}
-                            />
-                            <ThemedText>{`${item.name}:\n ${formatCurrency(item.population)}`}</ThemedText>
-                          </ThemedView>
-                        ))}
-                      </ThemedView>
-                    </>
-                  ) : (
-                    <ThemedText style={styles.noData}>
-                      Sem dados mensais disponíveis
-                    </ThemedText>
-                  )}
-              </ThemedView>
-            </Animated.View>
-
+                    <ThemedView style={{ marginLeft: 10, flex: 1, justifyContent: "center" }}>
+                      {dataPie.map((item, index) => (
+                        <ThemedView
+                          key={index}
+                          style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+                        >
+                          <View
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: 8,
+                              backgroundColor: item.color,
+                              marginRight: 8,
+                            }}
+                          />
+                          <ThemedText>{`${item.name}:\n ${formatCurrency(item.population)}`}</ThemedText>
+                        </ThemedView>
+                      ))}
+                    </ThemedView>
+                  </>
+                ) : (
+                  <ThemedText style={styles.noData}>
+                    Sem dados mensais disponíveis
+                  </ThemedText>
+                )}
+            </ThemedView>
+            
             <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                Receitas por Categoria
-              </ThemedText>
-              {dashboardData.incomeByCategory.length > 0 ? (
+              <ThemedText style={styles.sectionTitle}>Receitas por Categoria</ThemedText>
+              {incomeByCategory.length > 0 ? (
                 <ThemedView style={styles.itemsContainer}>
-                  {dashboardData.incomeByCategory.map((item, index) => (
+                  {incomeByCategory.map((item, index) => (
                     <ThemedView key={index} style={styles.item}>
                       <ThemedView style={styles.itemLeft}>
-                        <ThemedText style={styles.itemIcon}>
-                          {item.icon}
-                        </ThemedText>
-                        <ThemedText style={styles.itemName}>
-                          {item.categoryName}
-                        </ThemedText>
+                        <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>
+                        <ThemedText style={styles.itemName}>{item.name}</ThemedText>
                       </ThemedView>
-                      <ThemedText style={styles.income}>
-                        {formatCurrency(item.amount)}
-                      </ThemedText>
+                      <ThemedText style={styles.income}>{formatCurrency(item.amount)}</ThemedText>
                     </ThemedView>
                   ))}
                 </ThemedView>
               ) : (
                 <ThemedView style={styles.noDataContainer}>
-                  <ThemedText style={styles.noData}>
-                    Nenhum dado de receita disponível
-                  </ThemedText>
+                  <ThemedText style={styles.noData}>Nenhum dado de receita disponível</ThemedText>
                 </ThemedView>
               )}
             </ThemedView>
 
             <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                Despesas por Categoria
-              </ThemedText>
-              {dashboardData.expenseByCategory.length > 0 ? (
+              <ThemedText style={styles.sectionTitle}>Despesas por Categoria</ThemedText>
+              {expenseByCategory.length > 0 ? (
                 <ThemedView style={styles.itemsContainer}>
-                  {dashboardData.expenseByCategory.map((item, index) => (
+                  {expenseByCategory.map((item, index) => (
                     <ThemedView key={index} style={styles.item}>
                       <ThemedView style={styles.itemLeft}>
-                        <ThemedText style={styles.itemIcon}>
-                          {item.icon}
-                        </ThemedText>
-                        <ThemedText style={styles.itemName}>
-                          {item.categoryName}
-                        </ThemedText>
+                        <ThemedText style={styles.itemIcon}>{item.icon}</ThemedText>
+                        <ThemedText style={styles.itemName}>{item.name}</ThemedText>
                       </ThemedView>
-                      <ThemedText style={styles.expense}>
-                        {formatCurrency(item.amount)}
-                      </ThemedText>
+                      <ThemedText style={styles.expense}>{formatCurrency(item.amount)}</ThemedText>
                     </ThemedView>
                   ))}
                 </ThemedView>
               ) : (
                 <ThemedView style={styles.noDataContainer}>
-                  <ThemedText style={styles.noData}>
-                    Nenhum dado de despesa disponível
-                  </ThemedText>
+                  <ThemedText style={styles.noData}>Nenhum dado de despesa disponível</ThemedText>
                 </ThemedView>
               )}
             </ThemedView>
+
 
           </ThemedView>
 
