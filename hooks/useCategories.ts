@@ -1,105 +1,96 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Category } from "../types";
 import { useAuth } from "./firebase/useAuth";
 import {
   useFirebaseCRUD,
   useFirestoreCollection,
+  useFirestoreInfinite,
 } from "./firebase/useFirebaseCRUD";
-import { useForceReset } from "./useForceReset";
 
-export function useCategories() {
+type UseCategoriesOptions = {
+  usePaged?: boolean;
+  pageSize?: number;
+  mode?: "snapshot" | "values";
+};
+
+export function useCategories(opts: UseCategoriesOptions = {}) {
   const { user } = useAuth();
-  const { forceCompleteReset } = useForceReset();
+  const { usePaged = false, pageSize = 20, mode = "snapshot" } = opts;
 
-  const [refreshKey, setRefreshKey] = useState(0);
+  const orderBy = useMemo(() => ["name", "id"], []);
 
-  const {
-    data: categories,
-    loading,
-    error,
-    addDocument,
-  } = useFirestoreCollection<Category>("categories", "name");
+  const realtime = useFirestoreCollection<Category>("categories", "name");
+  const infinite = useFirestoreInfinite<Category>(
+    "categories",
+    { orderBy, direction: "asc", limit: pageSize },
+    mode
+  );
+
+  const categories = usePaged ? infinite.data : realtime.data;
+  const loading = usePaged ? infinite.loading : realtime.loading;
+  const error = usePaged ? infinite.error : realtime.error;
 
   const { update: updateDoc, remove: removeDoc } = useFirebaseCRUD<Category>();
 
-  useEffect(() => {
-    if (!user) {
-      setRefreshKey((prev) => prev + 1);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, [categories.length, loading, error]);
-
   const addCategory = useCallback(
     async (categoryData: Omit<Category, "id" | "userId">) => {
-      try {
-        const id = await addDocument(categoryData);
-        setRefreshKey((prev) => prev + 1);
-        return id;
-      } catch (error) {
-        console.error("Erro ao adicionar categoria:", error);
-        throw error;
-      }
+      const add = usePaged
+        ? async (data: Omit<Category, "id" | "userId">) => {
+            const id = (await infinite.options?.limit)
+              ? await realtime.addDocument(data)
+              : await realtime.addDocument(data);
+            await infinite.onRefresh?.();
+            return id!;
+          }
+        : realtime.addDocument;
+
+      const id = await add(categoryData);
+      return id;
     },
-    [addDocument]
+
+    [usePaged, realtime.addDocument, infinite.onRefresh]
   );
 
   const updateCategory = useCallback(
     async (category: Category) => {
-      try {
-        await updateDoc("categories", category.id, {
-          name: category.name,
-          icon: category.icon,
-        });
-        setRefreshKey((prev) => prev + 1);
-      } catch (error) {
-        console.error("Erro ao atualizar categoria:", error);
-        throw error;
-      }
+      await updateDoc("categories", category.id, {
+        name: category.name,
+        icon: category.icon,
+      });
+      if (usePaged) await infinite.onRefresh?.();
     },
-    [updateDoc]
+    [updateDoc, usePaged, infinite.onRefresh]
   );
 
   const deleteCategory = useCallback(
     async (categoryId: string) => {
-      try {
-        await removeDoc("categories", categoryId);
-        setRefreshKey((prev) => prev + 1);
-      } catch (error) {
-        console.error("Erro ao deletar categoria:", error);
-        throw error;
-      }
+      await removeDoc("categories", categoryId);
+      if (usePaged) await infinite.onRefresh?.();
     },
-    [removeDoc]
+    [removeDoc, usePaged, infinite.onRefresh]
   );
 
   const getCategoryById = useCallback(
-    (categoryId: string): Category | undefined => {
-      return categories.find((category) => category.id === categoryId);
-    },
+    (categoryId: string): Category | undefined =>
+      categories.find((c) => c.id === categoryId),
     [categories]
   );
 
   const searchCategories = useCallback(
     (searchTerm: string): Category[] => {
-      return categories.filter((category) =>
-        category.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const q = (searchTerm ?? "").trim().toLowerCase();
+      if (!q) return categories;
+      return categories.filter((c) => (c.name ?? "").toLowerCase().includes(q));
     },
     [categories]
   );
 
   const seedCategories = useCallback(async (): Promise<void> => {
     if (!user) {
-      console.warn(
-        "Usuário não logado, não é possível criar categorias padrão"
-      );
+      console.warn("Usuário não logado; seed cancelado.");
       return;
     }
-
-    const defaultCategories: Omit<Category, "id" | "userId">[] = [
+    const defaults: Omit<Category, "id" | "userId">[] = [
       { name: "Alimentação", icon: "🍽️" },
       { name: "Transporte", icon: "🚗" },
       { name: "Saúde", icon: "🏥" },
@@ -113,34 +104,17 @@ export function useCategories() {
     ];
 
     if (categories.length === 0) {
-      try {
-        for (const category of defaultCategories) {
-          await addDocument(category);
-        }
-        setRefreshKey((prev) => prev + 1);
-      } catch (error) {
-        console.error("Erro ao criar categorias padrão:", error);
-        throw error;
-      }
-    } else {
+      await Promise.all(defaults.map((d) => addCategory(d)));
+      if (usePaged) await infinite.onRefresh?.();
     }
-  }, [categories, addDocument, user]);
-
-  const clearLocalCache = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, []);
+  }, [user, categories.length, addCategory, usePaged, infinite.onRefresh]);
 
   const refreshCategories = useCallback(async () => {
-    try {
-      await forceCompleteReset();
-      setRefreshKey((prev) => prev + 1);
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error("Erro ao atualizar categorias:", error);
-      throw error;
+    if (usePaged) {
+      await infinite.onRefresh?.();
+    } else {
     }
-  }, [forceCompleteReset]);
+  }, [usePaged, infinite.onRefresh]);
 
   return {
     categories,
@@ -150,15 +124,16 @@ export function useCategories() {
     addCategory,
     updateCategory,
     deleteCategory,
-    getCategoryById,
 
+    getCategoryById,
     searchCategories,
     seedCategories,
-
-    clearAllCategories: clearLocalCache,
     refreshCategories,
 
-    refreshKey,
+    hasNext: usePaged ? infinite.hasNext : false,
+    loadMore: usePaged ? infinite.onEndReached : undefined,
+    loadingMore: usePaged ? infinite.loadingMore : false,
+
     isAuthenticated: !!user,
   };
 }

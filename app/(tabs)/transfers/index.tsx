@@ -5,7 +5,7 @@ import { useTransfers } from "@/contexts/TransferContext";
 import { TransactionType, Transfer } from "@/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,40 +21,42 @@ import {
 
 export default function TransfersListScreen() {
   const router = useRouter();
-  const { transfers, loading, error, deleteTransfer, refreshTransfers } =
-    useTransfers();
+  const {
+    transfers,
+    loading,
+    error,
+    deleteTransfer,
+    refreshTransfers,
+    hasNext,
+    loadMore,
+    loadingMore,
+  } = useTransfers();
   const { categories } = useCategories();
 
-  const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Transfer | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
 
-  useEffect(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, [transfers?.length, loading, error]);
-
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      if (refreshTransfers) await refreshTransfers();
-      setRefreshKey((prev) => prev + 1);
-    } catch (error) {
-      console.error("Erro ao atualizar transfers:", error);
+      await refreshTransfers();
     } finally {
       setIsRefreshing(false);
     }
   }, [refreshTransfers]);
 
-  const getCategoryName = (categoryId: string) => {
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category ? category.name : "N/A";
-  };
+  const getCategoryName = useCallback(
+    (categoryId: string) =>
+      categories.find((c) => c.id === categoryId)?.name ?? "N/A",
+    [categories]
+  );
 
-  const getCategoryIcon = (categoryId: string) => {
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category ? category.icon : "❓";
-  };
+  const getCategoryIcon = useCallback(
+    (categoryId: string) =>
+      categories.find((c) => c.id === categoryId)?.icon ?? "❓",
+    [categories]
+  );
 
   const openActionModal = (item: Transfer) => {
     setSelectedItem(item);
@@ -67,22 +69,19 @@ export default function TransfersListScreen() {
   };
 
   const handleView = () => {
-    if (selectedItem) {
-      closeActionModal();
-      router.push(`/transfers/${selectedItem.id}/view`);
-    }
+    if (!selectedItem) return;
+    closeActionModal();
+    router.push(`/transfers/${selectedItem.id}/view`);
   };
 
   const handleEdit = () => {
-    if (selectedItem) {
-      closeActionModal();
-      router.push(`/transfers/${selectedItem.id}/edit`);
-    }
+    if (!selectedItem) return;
+    closeActionModal();
+    router.push(`/transfers/${selectedItem.id}/edit`);
   };
 
   const handleDelete = async () => {
     if (!selectedItem) return;
-
     Alert.alert("Excluir", `Excluir "${selectedItem.description}"?`, [
       { text: "Cancelar", style: "cancel" },
       {
@@ -92,7 +91,6 @@ export default function TransfersListScreen() {
           try {
             await deleteTransfer(selectedItem.id);
             closeActionModal();
-            setRefreshKey((prev) => prev + 1);
           } catch {
             Alert.alert("Erro", "Falha ao excluir");
           }
@@ -101,20 +99,19 @@ export default function TransfersListScreen() {
     ]);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value);
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
     });
-  };
 
+  const keyExtractor = useCallback((item: Transfer) => item.id, []);
   const renderTransfer = useCallback(
     ({ item }: { item: Transfer }) => (
       <TouchableOpacity
@@ -153,7 +150,30 @@ export default function TransfersListScreen() {
         </ThemedView>
       </TouchableOpacity>
     ),
-    [router, categories, getCategoryIcon, getCategoryName]
+    [router, getCategoryIcon, getCategoryName]
+  );
+
+  const ListEmptyComponent = useMemo(
+    () => (
+      <ThemedView style={styles.emptyContainer}>
+        <MaterialCommunityIcons name="bank-transfer" size={48} color="#ccc" />
+        <ThemedText style={styles.emptyTitle}>Nenhuma transferência</ThemedText>
+        <ThemedText style={styles.emptySubtitle}>
+          Adicione sua primeira transação
+        </ThemedText>
+      </ThemedView>
+    ),
+    []
+  );
+
+  const ListFooterComponent = useMemo(
+    () =>
+      loadingMore ? (
+        <View style={styles.footer}>
+          <ActivityIndicator size="small" color="#666" />
+        </View>
+      ) : null,
+    [loadingMore]
   );
 
   if (loading && !isRefreshing) {
@@ -182,54 +202,43 @@ export default function TransfersListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.container} key={refreshKey}>
-        {!transfers || transfers?.length === 0 ? (
-          <ThemedView style={styles.emptyContainer}>
-            <MaterialCommunityIcons
-              name="bank-transfer"
-              size={48}
-              color="#ccc"
+      <ThemedView style={styles.container}>
+        <FlatList
+          data={transfers}
+          renderItem={renderTransfer}
+          keyExtractor={keyExtractor}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={ListEmptyComponent}
+          ListFooterComponent={ListFooterComponent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={["#666"]}
+              tintColor="#666"
             />
-            <ThemedText style={styles.emptyTitle}>
-              Nenhuma transferência
-            </ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-              Adicione sua primeira transação
-            </ThemedText>
-          </ThemedView>
-        ) : (
-          <FlatList
-            data={transfers}
-            renderItem={renderTransfer}
-            keyExtractor={(item) => `${item.id}-${refreshKey}`}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            extraData={refreshKey}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                colors={["#666"]}
-                tintColor="#666"
-              />
-            }
-            removeClippedSubviews={false}
-            initialNumToRender={15}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            getItemLayout={(data, index) => ({
-              length: 70,
-              offset: 70 * index,
-              index,
-            })}
-          />
-        )}
+          }
+          removeClippedSubviews={false}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          getItemLayout={(data, index) => ({
+            length: 70,
+            offset: 70 * index,
+            index,
+          })}
+          onEndReachedThreshold={0.35}
+          onEndReached={() => {
+            if (hasNext && !loadingMore) loadMore?.();
+          }}
+        />
       </ThemedView>
 
       <Modal
         visible={showActionModal}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={closeActionModal}
       >
@@ -285,83 +294,40 @@ export default function TransfersListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
-  loadingText: {
-    fontSize: 13,
-    color: "#666",
-  },
-  errorText: {
-    color: "#dc3545",
-    fontSize: 13,
-    textAlign: "center",
-  },
+  loadingText: { fontSize: 13, color: "#666" },
+  errorText: { color: "#dc3545", fontSize: 13, textAlign: "center" },
   retryBtn: {
     backgroundColor: "#007bff",
     padding: 8,
     borderRadius: 4,
     marginTop: 8,
   },
-  retryText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 80,
-  },
+  retryText: { color: "white", fontSize: 12, fontWeight: "500" },
+  list: { flex: 1 },
+  listContent: { padding: 16, paddingBottom: 80 },
+  footer: { paddingVertical: 16 },
   item: {
     backgroundColor: "#fff",
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  description: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-  },
-  category: {
-    fontSize: 11,
-    color: "#666",
-  },
-  right: {
-    alignItems: "flex-end",
-  },
-  amount: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  income: {
-    color: "#28a745",
-  },
-  expense: {
-    color: "#dc3545",
-  },
+  content: { flexDirection: "row", alignItems: "center", gap: 12 },
+  icon: { fontSize: 16 },
+  info: { flex: 1, gap: 2 },
+  description: { fontSize: 14, fontWeight: "500", color: "#333" },
+  category: { fontSize: 11, color: "#666" },
+  right: { alignItems: "flex-end" },
+  amount: { fontSize: 13, fontWeight: "600" },
+  income: { color: "#28a745" },
+  expense: { color: "#dc3545" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
@@ -375,11 +341,7 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
   },
-  emptySubtitle: {
-    fontSize: 13,
-    color: "#666",
-    textAlign: "center",
-  },
+  emptySubtitle: { fontSize: 13, color: "#666", textAlign: "center" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -409,17 +371,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     borderRadius: 8,
   },
-  actionText: {
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "500",
-  },
-  actionDanger: {
-    backgroundColor: "#fff5f5",
-  },
-  actionDangerText: {
-    color: "#dc3545",
-  },
+  actionText: { fontSize: 14, color: "#333", fontWeight: "500" },
+  actionDanger: { backgroundColor: "#fff5f5" },
+  actionDangerText: { color: "#dc3545" },
   cancelButton: {
     marginTop: 10,
     paddingVertical: 12,
@@ -427,9 +381,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
   },
-  cancelText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
+  cancelText: { fontSize: 14, color: "#666", fontWeight: "500" },
 });

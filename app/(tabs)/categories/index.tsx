@@ -4,7 +4,7 @@ import { useCategories } from "@/contexts/CategoryContext";
 import { Category } from "@/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,37 +17,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../../hooks/firebase/useAuth";
-import { useForceReset } from "../../../hooks/useForceReset";
 
 export default function CategoriesListScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { categories, loading, error, deleteCategory } = useCategories();
-  const { forceCompleteReset } = useForceReset();
 
-  const [refreshKey, setRefreshKey] = useState(0);
+  const {
+    categories,
+    loading,
+    error,
+    deleteCategory,
+    refreshCategories,
+    hasNext,
+    loadMore,
+    loadingMore,
+  } = useCategories();
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Category | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
 
-  useEffect(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, [categories?.length, loading, error]);
-
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-
     try {
-      await forceCompleteReset();
-      setRefreshKey((prev) => prev + 1);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    } catch (error) {
-      console.error("Erro no refresh:", error);
+      await refreshCategories();
     } finally {
       setIsRefreshing(false);
     }
-  }, [forceCompleteReset]);
+  }, [refreshCategories]);
 
   const openActionModal = (item: Category) => {
     setSelectedItem(item);
@@ -60,22 +56,19 @@ export default function CategoriesListScreen() {
   };
 
   const handleView = () => {
-    if (selectedItem) {
-      closeActionModal();
-      router.push(`/categories/${selectedItem.id}/view`);
-    }
+    if (!selectedItem) return;
+    closeActionModal();
+    router.push(`/categories/${selectedItem.id}/view`);
   };
 
   const handleEdit = () => {
-    if (selectedItem) {
-      closeActionModal();
-      router.push(`/categories/${selectedItem.id}/edit`);
-    }
+    if (!selectedItem) return;
+    closeActionModal();
+    router.push(`/categories/${selectedItem.id}/edit`);
   };
 
   const handleDelete = async () => {
     if (!selectedItem) return;
-
     Alert.alert("Excluir", `Excluir "${selectedItem.name}"?`, [
       { text: "Cancelar", style: "cancel" },
       {
@@ -85,7 +78,6 @@ export default function CategoriesListScreen() {
           try {
             await deleteCategory(selectedItem.id);
             closeActionModal();
-            setRefreshKey((prev) => prev + 1);
           } catch {
             Alert.alert("Erro", "Falha ao excluir categoria");
           }
@@ -94,6 +86,7 @@ export default function CategoriesListScreen() {
     ]);
   };
 
+  const keyExtractor = useCallback((item: Category) => item.id, []);
   const renderCategory = useCallback(
     ({ item }: { item: Category }) => (
       <TouchableOpacity
@@ -104,7 +97,6 @@ export default function CategoriesListScreen() {
       >
         <ThemedView style={styles.content}>
           <ThemedText style={styles.icon}>{item.icon}</ThemedText>
-
           <ThemedView style={styles.info}>
             <ThemedText style={styles.name}>{item.name}</ThemedText>
           </ThemedView>
@@ -112,6 +104,29 @@ export default function CategoriesListScreen() {
       </TouchableOpacity>
     ),
     [router]
+  );
+
+  const ListEmptyComponent = useMemo(
+    () => (
+      <ThemedView style={styles.emptyContainer}>
+        <MaterialCommunityIcons name="folder-outline" size={48} color="#ccc" />
+        <ThemedText style={styles.emptyTitle}>Nenhuma categoria</ThemedText>
+        <ThemedText style={styles.emptySubtitle}>
+          Adicione sua primeira categoria
+        </ThemedText>
+      </ThemedView>
+    ),
+    []
+  );
+
+  const ListFooterComponent = useMemo(
+    () =>
+      loadingMore ? (
+        <View style={styles.footer}>
+          <ActivityIndicator size="small" color="#666" />
+        </View>
+      ) : null,
+    [loadingMore]
   );
 
   if (loading && !isRefreshing) {
@@ -140,52 +155,43 @@ export default function CategoriesListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.container} key={refreshKey}>
-        {!categories || categories?.length === 0 ? (
-          <ThemedView style={styles.emptyContainer}>
-            <MaterialCommunityIcons
-              name="folder-outline"
-              size={48}
-              color="#ccc"
+      <ThemedView style={styles.container}>
+        <FlatList
+          data={categories}
+          renderItem={renderCategory}
+          keyExtractor={keyExtractor}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={ListEmptyComponent}
+          ListFooterComponent={ListFooterComponent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={["#666"]}
+              tintColor="#666"
             />
-            <ThemedText style={styles.emptyTitle}>Nenhuma categoria</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-              Adicione sua primeira categoria
-            </ThemedText>
-          </ThemedView>
-        ) : (
-          <FlatList
-            data={categories}
-            renderItem={renderCategory}
-            keyExtractor={(item) => `${item.id}-${refreshKey}`}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            extraData={refreshKey}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                colors={["#666"]}
-                tintColor="#666"
-              />
-            }
-            removeClippedSubviews={false}
-            initialNumToRender={15}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            getItemLayout={(data, index) => ({
-              length: 70,
-              offset: 70 * index,
-              index,
-            })}
-          />
-        )}
+          }
+          removeClippedSubviews={false}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          getItemLayout={(data, index) => ({
+            length: 70,
+            offset: 70 * index,
+            index,
+          })}
+          onEndReachedThreshold={0.35}
+          onEndReached={() => {
+            if (hasNext && !loadingMore) loadMore?.();
+          }}
+        />
       </ThemedView>
 
       <Modal
         visible={showActionModal}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={closeActionModal}
       >
@@ -241,66 +247,34 @@ export default function CategoriesListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
-  loadingText: {
-    fontSize: 13,
-    color: "#666",
-  },
-  errorText: {
-    color: "#dc3545",
-    fontSize: 13,
-    textAlign: "center",
-  },
+  loadingText: { fontSize: 13, color: "#666" },
+  errorText: { color: "#dc3545", fontSize: 13, textAlign: "center" },
   retryBtn: {
     backgroundColor: "#007bff",
     padding: 8,
     borderRadius: 4,
     marginTop: 8,
   },
-  retryText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 80,
-  },
+  retryText: { color: "white", fontSize: 12, fontWeight: "500" },
+  list: { flex: 1 },
+  listContent: { padding: 16, paddingBottom: 80 },
   item: {
     backgroundColor: "#fff",
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-  },
+  content: { flexDirection: "row", alignItems: "center", gap: 12 },
+  icon: { fontSize: 16 },
+  info: { flex: 1, gap: 2 },
+  name: { fontSize: 14, fontWeight: "500", color: "#333" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
@@ -314,11 +288,8 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
   },
-  emptySubtitle: {
-    fontSize: 13,
-    color: "#666",
-    textAlign: "center",
-  },
+  emptySubtitle: { fontSize: 13, color: "#666", textAlign: "center" },
+  footer: { paddingVertical: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -348,17 +319,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     borderRadius: 8,
   },
-  actionText: {
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "500",
-  },
-  actionDanger: {
-    backgroundColor: "#fff5f5",
-  },
-  actionDangerText: {
-    color: "#dc3545",
-  },
+  actionText: { fontSize: 14, color: "#333", fontWeight: "500" },
+  actionDanger: { backgroundColor: "#fff5f5" },
+  actionDangerText: { color: "#dc3545" },
   cancelButton: {
     marginTop: 10,
     paddingVertical: 12,
@@ -366,9 +329,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
   },
-  cancelText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
+  cancelText: { fontSize: 14, color: "#666", fontWeight: "500" },
 });
