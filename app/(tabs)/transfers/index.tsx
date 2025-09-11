@@ -167,7 +167,7 @@ export default function TransfersListScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [type, setType] = useState<TransactionType | null>(null);
   const [search, setSearch] = useState("");
-  const [date, setDate] = useState<string | undefined>(undefined);
+  const [date, setDate] = useState<string>("");
 
   const { categories, loading: loadingCat } = useCategories();
 
@@ -202,19 +202,31 @@ export default function TransfersListScreen() {
         </TouchableOpacity>
       </View>
 
-      {!loadingCat && (
-        <View style={{ paddingHorizontal: 8, marginVertical: 8, borderWidth: 1, borderColor: '#ccc', borderRadius: 6 }}>
-          <Picker
-            selectedValue={categoryId ?? 'all'}
-            onValueChange={(value) => setCategoryId(value === 'all' ? null : value)}
-          >
-            <Picker.Item label="Todas as categorias" value="all" />
-            {categories.map((cat) => (
-              <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-            ))}
-          </Picker>
-        </View>
-      )}
+      {/* Filtros de categoria e data */}
+      <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 4, marginVertical: 4 }}>
+        {!loadingCat && (
+          <View style={{ flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 6 }}>
+            <Picker
+              selectedValue={categoryId ?? "all"}
+              onValueChange={(value) => setCategoryId(value === "all" ? null : value)}
+            >
+              <Picker.Item label="Todas as categorias" value="all" />
+                {categories.map((cat) => (
+                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                ))}
+            </Picker>
+          </View>
+        )}
+      </View>
+
+      <ThemedView style={styles.field}>
+        <DatePicker
+          selectedDate={date}
+          onDateSelect={(selectedDate: string) => setDate(selectedDate)}
+          placeholder="Selecionar data"
+          label=""
+        />
+      </ThemedView>
 
       <TransferProvider
         filters={{
@@ -255,4 +267,7 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 12, width: "80%" },
   modalTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10, textAlign: "center" },
   actionItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10 },
+  field: {
+    gap: 4,
+  },
 });

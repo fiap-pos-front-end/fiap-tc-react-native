@@ -38,10 +38,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     const localDateString = `${localDate.getFullYear()}-${String(
       localDate.getMonth() + 1
     ).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+    
+    if (localDateString === selectedDate) {
+      onDateSelect("");
+    } else {
+      onDateSelect(localDateString);
+    }
 
-    onDateSelect(localDateString);
     closeDatePicker();
   };
+
 
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return "";
