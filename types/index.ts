@@ -9,12 +9,16 @@ export interface Category extends BaseEntity {
 }
 
 export interface Transfer extends BaseEntity {
+  id: string;
+  userId: string;
   description: string;
   amount: number;
   type: TransactionType;
   categoryId: string;
   date: string;
   notes?: string;
+  descNorm?: string;
+  month?: string;
 }
 
 export enum TransactionType {

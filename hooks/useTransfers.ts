@@ -7,17 +7,45 @@ import {
   useFirestoreInfinite,
 } from "./firebase/useFirebaseCRUD";
 
+export type TransferFilters = {
+  categoryId?: string;
+  type?: TransactionType;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
 type UseTransfersOptions = {
   usePaged?: boolean;
   pageSize?: number;
   mode?: "snapshot" | "values";
+  filters?: TransferFilters;
 };
 
-export function useTransfers(opts: UseTransfersOptions = {}) {
+export function useTransfersCore(opts: UseTransfersOptions = {}) {
   const { user } = useAuth();
-  const { usePaged = true, pageSize = 10, mode = "snapshot" } = opts;
+  const { usePaged = true, pageSize = 10, mode = "snapshot", filters = {} } = opts;
+
 
   const orderBy = useMemo(() => ["date", "id"], []);
+
+  const applyFilters = useCallback(
+    (list: Transfer[]): Transfer[] => {
+      return list.filter((t) => {
+        if (filters.categoryId && t.categoryId !== filters.categoryId) return false;
+        if (filters.type && t.type !== filters.type) return false;
+        if (filters.search) {
+          const s = filters.search.toLowerCase();
+          if (!t.description?.toLowerCase().includes(s) &&
+              !t.notes?.toLowerCase().includes(s)) return false;
+        }
+        if (filters.startDate && t.date < filters.startDate) return false;
+        if (filters.endDate && t.date > filters.endDate) return false;
+        return true;
+      });
+    },
+    [filters]
+  );
 
   const realtime = useFirestoreCollection<Transfer>("transfers", "date");
   const infinite = useFirestoreInfinite<Transfer>(
@@ -26,15 +54,14 @@ export function useTransfers(opts: UseTransfersOptions = {}) {
     mode
   );
 
-  const transfers = usePaged ? infinite.data : realtime.data;
+  const transfersRaw = usePaged ? infinite.data : realtime.data;
+  const transfers = useMemo(() => applyFilters(transfersRaw), [transfersRaw, applyFilters]);
+
   const loading = usePaged ? infinite.loading : realtime.loading;
   const error = usePaged ? infinite.error : realtime.error;
 
-  const {
-    update: updateDoc,
-    remove: removeDoc,
-    queryCollection,
-  } = useFirebaseCRUD<Transfer>();
+  const { update: updateDoc, remove: removeDoc, queryCollection } =
+    useFirebaseCRUD<Transfer>();
 
   const addTransfer = useCallback(
     async (transferData: Omit<Transfer, "id" | "userId">) => {
@@ -42,7 +69,6 @@ export function useTransfers(opts: UseTransfersOptions = {}) {
       if (usePaged) await infinite.onRefresh?.();
       return id;
     },
-
     [realtime.addDocument, usePaged, infinite.onRefresh]
   );
 
@@ -149,7 +175,6 @@ export function useTransfers(opts: UseTransfersOptions = {}) {
   const refreshTransfers = useCallback(async () => {
     if (usePaged) {
       await infinite.onRefresh?.();
-    } else {
     }
   }, [usePaged, infinite.onRefresh]);
 
@@ -157,26 +182,21 @@ export function useTransfers(opts: UseTransfersOptions = {}) {
     transfers,
     loading,
     error,
-
     addTransfer,
     updateTransfer,
     deleteTransfer,
     getTransferById,
-
     getTransfersByCategory,
     getTransfersByType,
     getTransfersByDateRange,
-
     getTotalBalance,
     getTotalIncome,
     getTotalExpenses,
     getMonthlyResume,
-
     refreshTransfers,
     hasNext: usePaged ? infinite.hasNext : false,
     loadMore: usePaged ? infinite.onEndReached : undefined,
     loadingMore: usePaged ? infinite.loadingMore : false,
-
     isAuthenticated: !!user,
   };
 }
