@@ -168,7 +168,7 @@ export default function TransfersListScreen() {
   const [type, setType] = useState<TransactionType | null>(null);
   const [search, setSearch] = useState("");
   const [date, setDate] = useState<string>("");
-
+  const [showFilters, setShowFilters] = useState(false);
   const { categories, loading: loadingCat } = useCategories();
 
   return (
@@ -185,48 +185,116 @@ export default function TransfersListScreen() {
           spellCheck={false}
         />
         <TouchableOpacity
-          style={[styles.filterBtn, type === TransactionType.INCOME && styles.incomeFilter]}
-          onPress={() => setType(type === TransactionType.INCOME ? null : TransactionType.INCOME)}
+          style={styles.filterIcon}
+          onPress={() => setShowFilters(true)}
         >
-          <ThemedText style={type === TransactionType.INCOME ? styles.incomeFilterText : undefined}>
-            Receitas
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, type === TransactionType.EXPENSE && styles.expenseFilter]}
-          onPress={() => setType(type === TransactionType.EXPENSE ? null : TransactionType.EXPENSE)}
-        >
-          <ThemedText style={type === TransactionType.EXPENSE ? styles.expenseFilterText : undefined}>
-            Despesas
-          </ThemedText>
+          <MaterialCommunityIcons name="filter-variant" size={22} color="#333" />
         </TouchableOpacity>
       </View>
 
-      {/* Filtros de categoria e data */}
-      <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 4, marginVertical: 4 }}>
-        {!loadingCat && (
-          <View style={{ flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 6 }}>
-            <Picker
-              selectedValue={categoryId ?? "all"}
-              onValueChange={(value) => setCategoryId(value === "all" ? null : value)}
-            >
-              <Picker.Item label="Todas as categorias" value="all" />
-                {categories.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-                ))}
-            </Picker>
-          </View>
-        )}
-      </View>
 
-      <ThemedView style={styles.field}>
-        <DatePicker
-          selectedDate={date}
-          onDateSelect={(selectedDate: string) => setDate(selectedDate)}
-          placeholder="Selecionar data"
-          label=""
-        />
-      </ThemedView>
+      <Modal
+        visible={showFilters}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowFilters(false)}
+        >
+          <Pressable style={styles.modalContent}>
+            <ThemedText style={styles.modalTitle}>Filtros</ThemedText>
+
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  type === TransactionType.INCOME && styles.incomeFilter,
+                ]}
+                onPress={() =>
+                  setType(type === TransactionType.INCOME ? null : TransactionType.INCOME)
+                }
+              >
+                <ThemedText
+                  style={
+                    type === TransactionType.INCOME
+                      ? styles.incomeFilterText
+                      : undefined
+                  }
+                >
+                  Receitas
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  type === TransactionType.EXPENSE && styles.expenseFilter,
+                ]}
+                onPress={() =>
+                  setType(type === TransactionType.EXPENSE ? null : TransactionType.EXPENSE)
+                }
+              >
+                <ThemedText
+                  style={
+                    type === TransactionType.EXPENSE
+                      ? styles.expenseFilterText
+                      : undefined
+                  }
+                >
+                  Despesas
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {!loadingCat && (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={categoryId ?? "all"}
+                  onValueChange={(value) =>
+                    setCategoryId(value === "all" ? null : value)
+                  }
+                >
+                  <Picker.Item label="Todas as categorias" value="all" />
+                  {categories.map((cat) => (
+                    <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                  ))}
+                </Picker>
+              </View>
+            )}
+
+            <ThemedView style={styles.field}>
+              <DatePicker
+                selectedDate={date}
+                onDateSelect={(selectedDate: string) => setDate(selectedDate)}
+                placeholder="Selecionar data"
+                label=""
+              />
+            </ThemedView>
+
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.clearBtn]}
+                onPress={() => {
+                  setCategoryId(null);
+                  setType(null);
+                  setSearch("");
+                  setDate("");
+                }}
+              >
+                <ThemedText style={styles.clearBtnText}>Limpar filtros</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.closeBtn]}
+                onPress={() => setShowFilters(false)}
+              >
+                <ThemedText style={styles.closeBtnText}>Fechar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <TransferProvider
         filters={{
@@ -244,30 +312,163 @@ export default function TransfersListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  listContent: { padding: 16, paddingBottom: 80 },
-  item: { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
-  content: { flexDirection: "row", alignItems: "center", gap: 12 },
-  icon: { fontSize: 16 },
-  info: { flex: 1, gap: 2 },
-  description: { fontSize: 14, fontWeight: "500", color: "#333" },
-  category: { fontSize: 11, color: "#666" },
-  right: { alignItems: "flex-end" },
-  amount: { fontSize: 13, fontWeight: "600" },
-  income: { color: "#28a745" },
-  expense: { color: "#dc3545" },
-  filters: { flexDirection: "row", padding: 8, gap: 8, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#eee" },
-  input: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 6, backgroundColor: "#fff", padding: 6, fontSize: 13 },
-  filterBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#ccc", marginRight: 6 },
-  incomeFilter: { backgroundColor: "#e6f9ed", borderColor: "#28a745" },
-  incomeFilterText: { color: "#28a745", fontWeight: "600" },
-  expenseFilter: { backgroundColor: "#fdecea", borderColor: "#dc3545" },
-  expenseFilterText: { color: "#dc3545", fontWeight: "600" },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
-  modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 12, width: "80%" },
-  modalTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10, textAlign: "center" },
-  actionItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10 },
-  field: {
-    gap: 4,
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
+  },
+  listContent: { 
+    padding: 16, 
+    paddingBottom: 80
+   },
+  item: { 
+    backgroundColor: "#fff", 
+    padding: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: "#f0f0f0" 
+  },
+  content: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 12 },
+  icon: { 
+    fontSize: 16 
+  },
+  info: { 
+    flex: 1, 
+    gap: 2 
+  },
+  description: { 
+    fontSize: 14, 
+    fontWeight: "500", 
+    color: "#333" 
+  },
+  category: { 
+    fontSize: 11, 
+    color: "#666"
+  },
+  right: { 
+    alignItems: "flex-end" 
+  },
+  amount: { 
+    fontSize: 13, 
+    fontWeight: "600" 
+  },
+  income: { 
+    color: "#28a745" 
+  },
+  expense: { 
+    color: "#dc3545" 
+  },
+  actionItem: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 10, 
+    padding: 10 
+  },
+  filters: {
+    flexDirection: "row",
+    padding: 8,
+    gap: 8,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    padding: 6,
+    fontSize: 13,
+  },
+  filterIcon: {
+    padding: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#f9f9f9",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  modalTitle: { 
+    fontSize: 16, 
+    fontWeight: "600", 
+    marginBottom: 12 
+  },
+  row: { 
+    flexDirection: "row", 
+    gap: 8, 
+    marginBottom: 12 
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  field: { 
+    marginBottom: 12 
+  },
+  filterBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  incomeFilter: { 
+    backgroundColor: "#e6f9ed", 
+    borderColor: "#28a745" 
+  },
+  incomeFilterText: { 
+    color: "#28a745", 
+    fontWeight: "600" 
+  },
+  expenseFilter: { 
+    backgroundColor: "#fdecea", 
+    borderColor: "#dc3545" 
+  },
+  expenseFilterText: { 
+    color: "#dc3545", 
+    fontWeight: "600"
+   },
+  closeBtn: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    backgroundColor: "#007bff",
+  },
+  closeBtnText: { 
+    color: "#fff",
+    fontWeight: "600" 
+  },
+  actionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  clearBtn: {
+    marginTop: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#f8f9fa",
+  },
+  clearBtnText: {
+     color: "#333",
+    fontWeight: "600" 
   },
 });
