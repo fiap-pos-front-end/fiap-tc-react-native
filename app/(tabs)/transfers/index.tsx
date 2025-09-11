@@ -20,21 +20,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 
 function TransfersListInner({
   categoryId,
   type,
   search,
-  dateRange,
+  date,
 }: {
   categoryId: string | null;
   type: TransactionType | null;
   search: string;
-  dateRange: { start?: string; end?: string };
+  date?: string;
 }) {
   const router = useRouter();
   const { categories } = useCategories();
-
   const {
     transfers,
     deleteTransfer,
@@ -61,6 +61,7 @@ function TransfersListInner({
     (id: string) => categories.find((c) => c.id === id)?.name ?? "N/A",
     [categories]
   );
+
   const getCategoryIcon = useCallback(
     (id: string) => categories.find((c) => c.id === id)?.icon ?? "❓",
     [categories]
@@ -95,10 +96,7 @@ function TransfersListInner({
   };
 
   const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(v);
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -169,7 +167,9 @@ export default function TransfersListScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [type, setType] = useState<TransactionType | null>(null);
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
+  const [date, setDate] = useState<string | undefined>(undefined);
+
+  const { categories, loading: loadingCat } = useCategories();
 
   return (
     <>
@@ -179,8 +179,11 @@ export default function TransfersListScreen() {
           placeholder="Buscar descrição..."
           value={search}
           onChangeText={setSearch}
+          autoCorrect={false}
+          autoComplete="off"
+          keyboardType="default"
+          spellCheck={false}
         />
-
         <TouchableOpacity
           style={[styles.filterBtn, type === TransactionType.INCOME && styles.incomeFilter]}
           onPress={() => setType(type === TransactionType.INCOME ? null : TransactionType.INCOME)}
@@ -199,134 +202,57 @@ export default function TransfersListScreen() {
         </TouchableOpacity>
       </View>
 
+      {!loadingCat && (
+        <View style={{ paddingHorizontal: 8, marginVertical: 8, borderWidth: 1, borderColor: '#ccc', borderRadius: 6 }}>
+          <Picker
+            selectedValue={categoryId ?? 'all'}
+            onValueChange={(value) => setCategoryId(value === 'all' ? null : value)}
+          >
+            <Picker.Item label="Todas as categorias" value="all" />
+            {categories.map((cat) => (
+              <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+            ))}
+          </Picker>
+        </View>
+      )}
+
       <TransferProvider
         filters={{
           categoryId: categoryId ?? undefined,
           type: type ?? undefined,
           search: search || undefined,
-          startDate: dateRange.start,
-          endDate: dateRange.end,
+          startDate: date,
+          endDate: date,
         }}
       >
-        <TransfersListInner
-          categoryId={categoryId}
-          type={type}
-          search={search}
-          dateRange={dateRange}
-        />
+        <TransfersListInner categoryId={categoryId} type={type} search={search} date={date} />
       </TransferProvider>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#fff" },
-  listContent: { 
-    padding: 16,
-    paddingBottom: 80 },
-  item: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  content: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    gap: 12 
-  },
-  icon: { 
-    fontSize: 16 
-  },
-  info: { 
-    flex: 1, 
-    gap: 2 
-  },
-  description: { 
-    fontSize: 14, 
-    fontWeight: "500", 
-    color: "#333" 
-  },
-  category: { 
-    fontSize: 11, 
-    color: "#666" 
-  },
-  right: { 
-    alignItems: "flex-end" 
-  },
-  amount: { 
-    fontSize: 13, fontWeight: "600" 
-  },
-  income: {
-    color: "#28a745" 
-  },
-  expense: { 
-    color: "#dc3545" 
-  },
-  filters: {
-    flexDirection: "row",
-    padding: 8,
-    gap: 8,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
-     backgroundColor: "#fff",
-    padding: 6,
-    fontSize: 13,
-  },
-  filterBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  incomeFilter: { 
-    backgroundColor: "#e6f9ed",
-    borderColor: "#28a745" 
-  },
-  incomeFilterText: { 
-    color: "#28a745", 
-    fontWeight: "600" 
-  },
-  expenseFilter: { 
-    backgroundColor: "#fdecea", 
-    borderColor: "#dc3545" 
-  },
-  expenseFilterText: { 
-    color: "#dc3545", 
-    fontWeight: "600" 
-  },
-  modalOverlay: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    backgroundColor: "rgba(0,0,0,0.4)"
-  },
-  modalContent: { 
-    backgroundColor: "#fff", 
-    padding: 20, 
-    borderRadius: 12, 
-    width: "80%" 
-  },
-  modalTitle: { 
-    fontSize: 16, 
-    fontWeight: "600", 
-    marginBottom: 10, 
-    textAlign: "center"
-   },
-  actionItem: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    gap: 10, 
-    padding: 10 
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  listContent: { padding: 16, paddingBottom: 80 },
+  item: { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  content: { flexDirection: "row", alignItems: "center", gap: 12 },
+  icon: { fontSize: 16 },
+  info: { flex: 1, gap: 2 },
+  description: { fontSize: 14, fontWeight: "500", color: "#333" },
+  category: { fontSize: 11, color: "#666" },
+  right: { alignItems: "flex-end" },
+  amount: { fontSize: 13, fontWeight: "600" },
+  income: { color: "#28a745" },
+  expense: { color: "#dc3545" },
+  filters: { flexDirection: "row", padding: 8, gap: 8, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#eee" },
+  input: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 6, backgroundColor: "#fff", padding: 6, fontSize: 13 },
+  filterBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#ccc", marginRight: 6 },
+  incomeFilter: { backgroundColor: "#e6f9ed", borderColor: "#28a745" },
+  incomeFilterText: { color: "#28a745", fontWeight: "600" },
+  expenseFilter: { backgroundColor: "#fdecea", borderColor: "#dc3545" },
+  expenseFilterText: { color: "#dc3545", fontWeight: "600" },
+  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
+  modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 12, width: "80%" },
+  modalTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10, textAlign: "center" },
+  actionItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10 },
 });
