@@ -51,6 +51,10 @@ export default function AddTransferScreen() {
       newErrors.categoryId = "Selecione uma categoria";
     }
 
+    if (!date) {
+      newErrors.date = "Selecione uma data";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -244,6 +248,9 @@ export default function AddTransferScreen() {
             placeholder="Selecionar data"
             editable={!loading}
           />
+          {errors.date && (
+            <ThemedText style={styles.error}>{errors.date}</ThemedText>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.field}>

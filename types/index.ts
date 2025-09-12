@@ -15,6 +15,8 @@ export interface Transfer extends BaseEntity {
   categoryId: string;
   date: string;
   notes?: string;
+  descNorm?: string;
+  month?: string;
 }
 
 export enum TransactionType {

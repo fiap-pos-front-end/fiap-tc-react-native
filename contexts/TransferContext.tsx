@@ -1,44 +1,60 @@
 import React, { createContext, ReactNode, useContext } from "react";
-import { useTransfers as useTransfersHook } from "../hooks/useTransfers";
-import { Transfer } from "../types";
+import { useTransfersCore, TransferFilters } from "../hooks/useTransfers";
+import { TransactionType, Transfer } from "../types";
 
 interface TransferContextType {
   transfers: Transfer[];
   loading: boolean;
   error: string | null;
-  addTransfer: (transferData: Omit<Transfer, "id">) => Promise<string>;
+  addTransfer: (transferData: Omit<Transfer, "id" | "userId">) => Promise<string>;
   updateTransfer: (transfer: Transfer) => Promise<void>;
   deleteTransfer: (transferId: string) => Promise<void>;
   getTransferById: (id: string) => Transfer | undefined;
-  getIncomeTransfers: () => Transfer[];
-  getExpenseTransfers: () => Transfer[];
-  getTransfersByCategory: (categoryId: string) => Transfer[];
-  getTransfersByPeriod: (startDate: string, endDate: string) => Transfer[];
+  getTransfersByCategory: (categoryId: string) => Promise<Transfer[]>;
+  getTransfersByType: (type: TransactionType) => Promise<Transfer[]>;
+  getTransfersByDateRange: (startDate: string, endDate: string) => Transfer[];
   getTotalIncome: () => number;
-  getTotalExpense: () => number;
-  getBalance: () => number;
-  seedTransfers: () => Promise<void>;
+  getTotalExpenses: () => number;
+  getTotalBalance: () => number;
+  getMonthlyResume: (year: number, month: number) => {
+    income: number;
+    expenses: number;
+    balance: number;
+    transactions: number;
+  };
   refreshTransfers: () => Promise<void>;
+  hasNext?: boolean;
+  loadMore?: () => void;
+  loadingMore?: boolean;
+  isAuthenticated: boolean;
 }
 
-const TransferContext = createContext<TransferContextType | undefined>(
-  undefined
-);
+const TransferContext = createContext<TransferContextType | undefined>(undefined);
 
-export function TransferProvider({ children }: { children: ReactNode }) {
-  const transferData = useTransfersHook();
+export function TransferProvider({
+  children,
+  usePaged = true,
+  pageSize = 10,
+  mode = "snapshot",
+  filters = {},
+}: {
+  children: ReactNode;
+  usePaged?: boolean;
+  pageSize?: number;
+  mode?: "snapshot" | "values";
+  filters?: TransferFilters;
+}) {
+  const transferData = useTransfersCore({ usePaged, pageSize, mode, filters });
 
   return (
-    <TransferContext.Provider value={transferData}>
+    <TransferContext.Provider value={transferData as TransferContextType}>
       {children}
     </TransferContext.Provider>
   );
 }
 
 export function useTransfers(): TransferContextType {
-  const context = useContext(TransferContext);
-  if (context === undefined) {
-    throw new Error("useTransfers must be used within a TransferProvider");
-  }
-  return context;
+  const ctx = useContext(TransferContext);
+  if (!ctx) throw new Error("useTransfers must be used within a TransferProvider");
+  return ctx;
 }

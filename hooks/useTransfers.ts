@@ -1,204 +1,202 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { TransactionType, Transfer } from "../types";
 import { useAuth } from "./firebase/useAuth";
 import {
   useFirebaseCRUD,
   useFirestoreCollection,
+  useFirestoreInfinite,
 } from "./firebase/useFirebaseCRUD";
-import { useForceReset } from "./useForceReset";
 
-export function useTransfers() {
+export type TransferFilters = {
+  categoryId?: string;
+  type?: TransactionType;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+type UseTransfersOptions = {
+  usePaged?: boolean;
+  pageSize?: number;
+  mode?: "snapshot" | "values";
+  filters?: TransferFilters;
+};
+
+export function useTransfersCore(opts: UseTransfersOptions = {}) {
   const { user } = useAuth();
-  const { forceCompleteReset } = useForceReset();
+  const { usePaged = true, pageSize = 10, mode = "snapshot", filters = {} } = opts;
 
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const {
-    data: transfers,
-    loading,
-    error,
-    addDocument,
-    queryDocuments,
-  } = useFirestoreCollection<Transfer>("transfers", "date");
+  const orderBy = useMemo(() => ["date", "id"], []);
 
-  const { update: updateDoc, remove: removeDoc } = useFirebaseCRUD<Transfer>();
+  const applyFilters = useCallback(
+    (list: Transfer[]): Transfer[] => {
+      return list.filter((t) => {
+        if (filters.categoryId && t.categoryId !== filters.categoryId) return false;
+        if (filters.type && t.type !== filters.type) return false;
+        if (filters.search) {
+          const s = filters.search.toLowerCase();
+          if (!t.description?.toLowerCase().includes(s) &&
+              !t.notes?.toLowerCase().includes(s)) return false;
+        }
+        if (filters.startDate && t.date < filters.startDate) return false;
+        if (filters.endDate && t.date > filters.endDate) return false;
+        return true;
+      });
+    },
+    [filters]
+  );
 
-  useEffect(() => {
-    if (!user) {
-      setRefreshKey((prev) => prev + 1);
-    }
-  }, [user]);
+  const realtime = useFirestoreCollection<Transfer>("transfers", "date");
+  const infinite = useFirestoreInfinite<Transfer>(
+    "transfers",
+    { orderBy, direction: "desc", limit: pageSize },
+    mode
+  );
 
-  useEffect(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, [transfers.length, loading, error]);
+  const transfersRaw = usePaged ? infinite.data : realtime.data;
+  const transfers = useMemo(() => applyFilters(transfersRaw), [transfersRaw, applyFilters]);
+
+  const loading = usePaged ? infinite.loading : realtime.loading;
+  const error = usePaged ? infinite.error : realtime.error;
+
+  const { update: updateDoc, remove: removeDoc, queryCollection } =
+    useFirebaseCRUD<Transfer>();
 
   const addTransfer = useCallback(
     async (transferData: Omit<Transfer, "id" | "userId">) => {
-      try {
-        const id = await addDocument(transferData);
-        setRefreshKey((prev) => prev + 1);
-        return id;
-      } catch (error) {
-        console.error("Erro ao adicionar transferência:", error);
-        throw error;
-      }
+      const id = await realtime.addDocument(transferData);
+      if (usePaged) await infinite.onRefresh?.();
+      return id;
     },
-    [addDocument]
+    [realtime.addDocument, usePaged, infinite.onRefresh]
   );
 
   const updateTransfer = useCallback(
     async (transfer: Transfer) => {
-      try {
-        await updateDoc("transfers", transfer.id, {
-          description: transfer.description,
-          amount: transfer.amount,
-          type: transfer.type,
-          categoryId: transfer.categoryId,
-          date: transfer.date,
-          notes: transfer.notes,
-        });
-        setRefreshKey((prev) => prev + 1);
-      } catch (error) {
-        console.error("Erro ao atualizar transferência:", error);
-        throw error;
-      }
+      await updateDoc("transfers", transfer.id, {
+        description: transfer.description,
+        amount: transfer.amount,
+        type: transfer.type,
+        categoryId: transfer.categoryId,
+        date: transfer.date,
+        notes: transfer.notes,
+      });
+      if (usePaged) await infinite.onRefresh?.();
     },
-    [updateDoc]
+    [updateDoc, usePaged, infinite.onRefresh]
   );
 
   const deleteTransfer = useCallback(
     async (transferId: string) => {
-      try {
-        await removeDoc("transfers", transferId);
-        setRefreshKey((prev) => prev + 1);
-      } catch (error) {
-        console.error("Erro ao deletar transferência:", error);
-        throw error;
-      }
+      await removeDoc("transfers", transferId);
+      if (usePaged) await infinite.onRefresh?.();
     },
-    [removeDoc]
+    [removeDoc, usePaged, infinite.onRefresh]
   );
 
   const getTransferById = useCallback(
-    (transferId: string): Transfer | undefined => {
-      return transfers.find((transfer) => transfer.id === transferId);
-    },
+    (transferId: string): Transfer | undefined =>
+      transfers.find((t) => t.id === transferId),
     [transfers]
   );
 
   const getTransfersByCategory = useCallback(
     async (categoryId: string) => {
-      try {
-        return await queryDocuments("categoryId", "==", categoryId);
-      } catch (error) {
-        console.error("Erro ao buscar transferências por categoria:", error);
-        throw error;
-      }
+      return await queryCollection("transfers", "categoryId", "==", categoryId);
     },
-    [queryDocuments]
+    [queryCollection]
   );
 
   const getTransfersByType = useCallback(
     async (type: TransactionType) => {
-      try {
-        return await queryDocuments("type", "==", type);
-      } catch (error) {
-        console.error("Erro ao buscar transferências por tipo:", error);
-        throw error;
-      }
+      return await queryCollection("transfers", "type", "==", type);
     },
-    [queryDocuments]
+    [queryCollection]
   );
 
   const getTransfersByDateRange = useCallback(
-    (startDate: string, endDate: string): Transfer[] => {
-      return transfers.filter(
-        (transfer) => transfer.date >= startDate && transfer.date <= endDate
-      );
-    },
+    (startDate: string, endDate: string): Transfer[] =>
+      transfers.filter((t) => t.date >= startDate && t.date <= endDate),
     [transfers]
   );
 
-  const getTotalBalance = useCallback((): number => {
-    return transfers.reduce((total, transfer) => {
-      return transfer.type === TransactionType.INCOME
-        ? total + transfer.amount
-        : total - transfer.amount;
-    }, 0);
-  }, [transfers]);
+  const getTotalBalance = useCallback(
+    (): number =>
+      transfers.reduce(
+        (total, t) =>
+          t.type === TransactionType.INCOME
+            ? total + t.amount
+            : total - t.amount,
+        0
+      ),
+    [transfers]
+  );
 
-  const getTotalIncome = useCallback((): number => {
-    return transfers
-      .filter((t) => t.type === TransactionType.INCOME)
-      .reduce((total, transfer) => total + transfer.amount, 0);
-  }, [transfers]);
+  const getTotalIncome = useCallback(
+    (): number =>
+      transfers
+        .filter((t) => t.type === TransactionType.INCOME)
+        .reduce((sum, t) => sum + t.amount, 0),
+    [transfers]
+  );
 
-  const getTotalExpenses = useCallback((): number => {
-    return transfers
-      .filter((t) => t.type === TransactionType.EXPENSE)
-      .reduce((total, transfer) => total + transfer.amount, 0);
-  }, [transfers]);
+  const getTotalExpenses = useCallback(
+    (): number =>
+      transfers
+        .filter((t) => t.type === TransactionType.EXPENSE)
+        .reduce((sum, t) => sum + t.amount, 0),
+    [transfers]
+  );
 
   const getMonthlyResume = useCallback(
     (year: number, month: number) => {
       const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
       const endDate = `${year}-${month.toString().padStart(2, "0")}-31`;
+      const monthly = getTransfersByDateRange(startDate, endDate);
 
-      const monthlyTransfers = getTransfersByDateRange(startDate, endDate);
-
-      const income = monthlyTransfers
+      const income = monthly
         .filter((t) => t.type === TransactionType.INCOME)
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      const expenses = monthlyTransfers
+        .reduce((s, t) => s + t.amount, 0);
+      const expenses = monthly
         .filter((t) => t.type === TransactionType.EXPENSE)
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((s, t) => s + t.amount, 0);
 
       return {
         income,
         expenses,
         balance: income - expenses,
-        transactions: monthlyTransfers.length,
+        transactions: monthly.length,
       };
     },
     [getTransfersByDateRange]
   );
 
   const refreshTransfers = useCallback(async () => {
-    try {
-      await forceCompleteReset();
-      setRefreshKey((prev) => prev + 1);
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error("Erro ao atualizar transferências:", error);
-      throw error;
+    if (usePaged) {
+      await infinite.onRefresh?.();
     }
-  }, [forceCompleteReset]);
+  }, [usePaged, infinite.onRefresh]);
 
   return {
     transfers,
     loading,
     error,
-
     addTransfer,
     updateTransfer,
     deleteTransfer,
     getTransferById,
-
     getTransfersByCategory,
     getTransfersByType,
     getTransfersByDateRange,
-
     getTotalBalance,
     getTotalIncome,
     getTotalExpenses,
     getMonthlyResume,
-
     refreshTransfers,
-
-    refreshKey,
+    hasNext: usePaged ? infinite.hasNext : false,
+    loadMore: usePaged ? infinite.onEndReached : undefined,
+    loadingMore: usePaged ? infinite.loadingMore : false,
     isAuthenticated: !!user,
   };
 }

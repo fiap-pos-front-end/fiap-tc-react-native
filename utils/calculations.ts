@@ -15,7 +15,11 @@ export const calculations = {
     });
   },
 
-  getTransfersByMonth(transfers: Transfer[], month?: number, year?: number): Transfer[] {
+  getTransfersByMonth(
+    transfers: Transfer[],
+    month?: number,
+    year?: number
+  ): Transfer[] {
     const now = new Date();
     const targetMonth = month ?? now.getMonth();
     const targetYear = year ?? now.getFullYear();
@@ -70,7 +74,10 @@ export const calculations = {
     return income - expense;
   },
 
-  getIncomeByCategory( transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string } [] {
+  getIncomeByCategory(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; amount: number; icon: string }[] {
     const currentMonthTransfers = this.getCurrentMonthTransfers(transfers);
     const incomeTransfers = currentMonthTransfers.filter(
       (transfer) => transfer.type === TransactionType.INCOME
@@ -100,7 +107,10 @@ export const calculations = {
     return Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
   },
 
-  getExpenseByCategory(transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string } [] {
+  getExpenseByCategory(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; amount: number; icon: string }[] {
     const currentMonthTransfers = this.getCurrentMonthTransfers(transfers);
     const expenseTransfers = currentMonthTransfers.filter(
       (transfer) => transfer.type === TransactionType.EXPENSE
@@ -130,7 +140,10 @@ export const calculations = {
     return Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
   },
 
-  getTopIncomeCategoryAllTime(transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string } [] {
+  getTopIncomeCategoryAllTime(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; amount: number; icon: string }[] {
     const incomeTransfers = transfers.filter(
       (transfer) => transfer.type === TransactionType.INCOME
     );
@@ -160,14 +173,17 @@ export const calculations = {
       return [];
     }
 
-    const topCategory = Array.from(categoryMap.values()).reduce((max, current) =>
-      current.amount > max.amount ? current : max
+    const topCategory = Array.from(categoryMap.values()).reduce(
+      (max, current) => (current.amount > max.amount ? current : max)
     );
 
     return [topCategory];
   },
 
-  getTopExpenseCategoryAllTime(transfers: Transfer[], categories: Category[]): { categoryName: string; amount: number; icon: string } [] {
+  getTopExpenseCategoryAllTime(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; amount: number; icon: string }[] {
     const incomeTransfers = transfers.filter(
       (transfer) => transfer.type === TransactionType.EXPENSE
     );
@@ -197,16 +213,51 @@ export const calculations = {
       return [];
     }
 
-    const topCategory = Array.from(categoryMap.values()).reduce((max, current) =>
-      current.amount > max.amount ? current : max
+    const topCategory = Array.from(categoryMap.values()).reduce(
+      (max, current) => (current.amount > max.amount ? current : max)
     );
 
     return [topCategory];
   },
 
-  getMonthlyIncomeExpense(transfers: Transfer[], categories: Category[]): { month: string; monthIndex: number; year: number; income: number; expense: number; categoryName: string; icon: string;} [] {
-    const monthOrder = ["jan", "fev", "mar", "abr", "mai", "jun","jul", "ago", "set", "out", "nov", "dez"];
-    const map = new Map<string,{ month: string; monthIndex: number; year: number; income: number; expense: number; categoryName: string; icon: string;}>();
+  getMonthlyIncomeExpense(
+    transfers: Transfer[],
+    categories: Category[]
+  ): {
+    month: string;
+    monthIndex: number;
+    year: number;
+    income: number;
+    expense: number;
+    categoryName: string;
+    icon: string;
+  }[] {
+    const monthOrder = [
+      "jan",
+      "fev",
+      "mar",
+      "abr",
+      "mai",
+      "jun",
+      "jul",
+      "ago",
+      "set",
+      "out",
+      "nov",
+      "dez",
+    ];
+    const map = new Map<
+      string,
+      {
+        month: string;
+        monthIndex: number;
+        year: number;
+        income: number;
+        expense: number;
+        categoryName: string;
+        icon: string;
+      }
+    >();
 
     if (transfers.length === 0) {
       const currentYear = new Date().getFullYear();
@@ -227,7 +278,6 @@ export const calculations = {
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
 
-    // Inicializa todos os meses para todas as categorias
     for (let year = minYear; year <= maxYear; year++) {
       monthOrder.forEach((month, monthIndex) => {
         categories.forEach((cat) => {
@@ -245,7 +295,6 @@ export const calculations = {
       });
     }
 
-    // Preenche os valores reais
     transfers.forEach((t) => {
       const date = new Date(t.date);
       const year = date.getFullYear();
@@ -265,16 +314,21 @@ export const calculations = {
       }
     });
 
-    // Retorna ordenado por ano e mês
     return Array.from(map.values()).sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year;
       return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
     });
   },
 
-  getByCategory( transfers: Transfer[],  categories: Category[]): { categoryName: string; icon: string; expense: number; income: number } [] {
+  getByCategory(
+    transfers: Transfer[],
+    categories: Category[]
+  ): { categoryName: string; icon: string; expense: number; income: number }[] {
     const currentMonthTransfers = this.getCurrentMonthTransfers(transfers);
-    const categoryMap = new Map<string, { categoryName: string; icon: string; expense: number; income: number }>();
+    const categoryMap = new Map<
+      string,
+      { categoryName: string; icon: string; expense: number; income: number }
+    >();
 
     currentMonthTransfers.forEach((transfer) => {
       const category = categories.find((cat) => cat.id === transfer.categoryId);
@@ -292,8 +346,10 @@ export const calculations = {
         categoryMap.set(category.id, {
           categoryName: category.name,
           icon: category.icon,
-          expense: transfer.type === TransactionType.EXPENSE ? transfer.amount : 0,
-          income: transfer.type === TransactionType.INCOME ? transfer.amount : 0,
+          expense:
+            transfer.type === TransactionType.EXPENSE ? transfer.amount : 0,
+          income:
+            transfer.type === TransactionType.INCOME ? transfer.amount : 0,
         });
       }
     });
@@ -313,7 +369,7 @@ export const calculations = {
     const savings = this.calculateSavings(transfers);
     const totalExpense = this.calculateTotalExpense(transfers);
     const totalIncome = this.calculateTotalIncome(transfers);
-    
+
     return {
       currentBalance,
       monthlyIncome,
@@ -321,12 +377,21 @@ export const calculations = {
       savings,
       totalExpense,
       totalIncome,
-      topIncomeCategory: this.getTopIncomeCategoryAllTime(transfers, categories),
-      topExpenseCategory: this.getTopExpenseCategoryAllTime(transfers, categories),
+      topIncomeCategory: this.getTopIncomeCategoryAllTime(
+        transfers,
+        categories
+      ),
+      topExpenseCategory: this.getTopExpenseCategoryAllTime(
+        transfers,
+        categories
+      ),
       incomeByCategory: this.getIncomeByCategory(transfers, categories),
       expenseByCategory: this.getExpenseByCategory(transfers, categories),
       getByCategory: this.getByCategory(transfers, categories),
-      getMonthlyIncomeExpense: this.getMonthlyIncomeExpense(transfers, categories),
+      getMonthlyIncomeExpense: this.getMonthlyIncomeExpense(
+        transfers,
+        categories
+      ),
     };
   },
 };
