@@ -9,8 +9,6 @@ export interface Category extends BaseEntity {
 }
 
 export interface Transfer extends BaseEntity {
-  id: string;
-  userId: string;
   description: string;
   amount: number;
   type: TransactionType;
