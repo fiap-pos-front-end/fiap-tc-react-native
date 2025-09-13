@@ -8,7 +8,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -18,7 +17,7 @@ import {
 export default function ViewTransferScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getTransferById, deleteTransfer, loading } = useTransfers();
+  const { getTransferById, loading } = useTransfers();
   const { getCategoryById } = useCategories();
   const [transfer, setTransfer] = useState<Transfer | null>(null);
 
@@ -28,9 +27,7 @@ export default function ViewTransferScreen() {
       if (foundTransfer) {
         setTransfer(foundTransfer);
       } else {
-        Alert.alert("Erro", "Transferência não encontrada", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        router.replace("/(tabs)/transfers");
       }
     }
   }, [id, getTransferById]);

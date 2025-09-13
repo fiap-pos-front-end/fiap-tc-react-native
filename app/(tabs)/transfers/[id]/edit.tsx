@@ -45,23 +45,21 @@ export default function EditTransferScreen() {
   const [attachmentKey, setAttachmentKey] = useState(0);
 
   useEffect(() => {
-    if (id) {
-      const foundTransfer = getTransferById(id);
-      if (foundTransfer) {
-        setTransfer(foundTransfer);
-        setDescription(foundTransfer.description);
-        setAmount(foundTransfer.amount.toString());
-        setType(foundTransfer.type);
-        setCategoryId(foundTransfer.categoryId);
-        setDate(foundTransfer.date);
-        setNotes(foundTransfer.notes || "");
-      } else {
-        Alert.alert("Erro", "Transferência não encontrada", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
-      }
+    if (!id) return;
+
+    const foundTransfer = getTransferById(id);
+    if (foundTransfer) {
+      setTransfer(foundTransfer);
+      setDescription(foundTransfer.description);
+      setAmount(foundTransfer.amount.toString());
+      setType(foundTransfer.type);
+      setCategoryId(foundTransfer.categoryId);
+      setDate(foundTransfer.date);
+      setNotes(foundTransfer.notes ?? "");
+    } else if (!loading) {
+      router.replace("/(tabs)/transfers");
     }
-  }, [id, getTransferById]);
+  }, [id, getTransferById, loading, router]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -142,7 +140,7 @@ export default function EditTransferScreen() {
         type,
         categoryId,
         date,
-        notes: notes.trim() || undefined,
+        notes: notes.trim() || "",
       };
 
       await updateTransfer(updatedTransfer);
@@ -159,9 +157,7 @@ export default function EditTransferScreen() {
         setAttachmentKey((prev) => prev + 1);
       }
 
-      Alert.alert("Sucesso", "Transferência atualizada!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.replace("/(tabs)/transfers");
     } catch (error) {
       Alert.alert("Erro", "Falha ao atualizar");
     }

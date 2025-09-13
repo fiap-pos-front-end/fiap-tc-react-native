@@ -96,7 +96,7 @@ export default function AddTransferScreen() {
         }
       }
 
-      router.back();
+      router.replace("/(tabs)/transfers");
     } catch (error) {
       console.error("Erro ao criar transferência:", error);
       Alert.alert("Erro", "Falha ao criar transferência");
