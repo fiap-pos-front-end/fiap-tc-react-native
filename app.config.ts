@@ -1,8 +1,7 @@
-import "dotenv/config";
-import type { ExpoConfig } from "expo/config";
+import 'dotenv/config';
+import type { ExpoConfig } from 'expo/config';
 
-const bool = (v: unknown, d = false) =>
-  ["true", "1", "yes", "on"].includes(String(v ?? d).toLowerCase());
+const bool = (v: unknown, d = false) => ['true', '1', 'yes', 'on'].includes(String(v ?? d).toLowerCase());
 
 const int = (v: unknown, d: number) => {
   const n = Number(v);
@@ -10,13 +9,13 @@ const int = (v: unknown, d: number) => {
 };
 
 const config: ExpoConfig = {
-  name: "fiap-f3-tech-challenge-3",
-  slug: "fiap-f3-tech-challenge-3",
-  version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/images/icon.png",
-  scheme: "fiapf3techchallenge3",
-  userInterfaceStyle: "automatic",
+  name: 'fiap-f3-tech-challenge-3',
+  slug: 'fiap-f3-tech-challenge-3',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/icon.png',
+  scheme: 'fiapf3techchallenge3',
+  userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
@@ -24,28 +23,29 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/icon.png",
-      backgroundColor: "#0092EA",
+      foregroundImage: './assets/images/icon.png',
+      backgroundColor: '#0092EA',
     },
     edgeToEdgeEnabled: true,
-    package: "br.com.bytebank",
+    package: 'br.com.bytebank',
   },
   web: {
-    bundler: "metro",
-    output: "static",
-    favicon: "./assets/images/favicon.png",
+    bundler: 'metro',
+    output: 'static',
+    favicon: './assets/images/favicon.png',
   },
   plugins: [
-    "expo-router",
+    'expo-router',
     [
-      "expo-splash-screen",
+      'expo-splash-screen',
       {
-        image: "./assets/images/splash-icon.png",
+        image: './assets/images/splash-icon.png',
         imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#0092EA",
+        resizeMode: 'contain',
+        backgroundColor: '#0092EA',
       },
     ],
+    '@react-native-firebase/app',
   ],
   experiments: {
     typedRoutes: true,
